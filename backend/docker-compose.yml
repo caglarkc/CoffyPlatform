@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # API Gateway with Traefik
+  traefik:
+    image: traefik:v2.9
+    container_name: coffy-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik:/etc/traefik
+    networks:
+      - coffy-network
+
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: coffy-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - coffy-network
+
+  # Redis
+  redis:
+    image: redis:latest
+    container_name: coffy-redis
+    command: redis-server --requirepass redispassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - coffy-network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: coffy-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - coffy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.coffy.local`)"
+      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+
+networks:
+  coffy-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+  redis-data:
+  rabbitmq-data:
