@@ -1,5 +1,5 @@
 /**
- * Auth Service Database Configuration
+ * Database configuration file
  * Contains connection settings for Redis and MongoDB
  */
 
@@ -7,10 +7,10 @@ module.exports = {
   // MongoDB connection settings
   mongodb: {
     url: 'mongodb://localhost:27017',
-    dbName: 'authServiceDB',
+    dbName: 'coffyDB',
     options: {
-      serverSelectionTimeoutMS: 5000, // 5 saniye sonra timeout
-      socketTimeoutMS: 45000, // 45 saniye sonra socket timeout
+      useNewUrlParser: true,
+      useUnifiedTopology: true
     }
   },
   

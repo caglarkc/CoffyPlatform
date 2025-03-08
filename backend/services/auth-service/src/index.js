@@ -1,60 +1,93 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const { config } = require('./config');
-const { connectDB } = require('./config/database');
-const { setupRabbitMQ } = require('./config/rabbitmq');
-const { setupRedis } = require('./config/redis');
-const { logger } = require('./utils/logger');
+// Load environment variables first
+require('dotenv').config();
 
+const express = require('express');
+const authRoutes = require('./routes/auth.routes');
+const { requestContextMiddleware } = require('./middlewares/requestContext');
+const errorHandler = require('./middlewares/errorHandler/errorHandler');
+
+const { 
+  connectMongoDB, 
+  connectRedis, 
+  closeConnections 
+} = require('./utils/database');
+
+// Create Express application
 const app = express();
+const PORT = process.env.PORT || 3001; // Auth service port
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: config.allowedOrigins,
-  credentials: true
-}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestContextMiddleware);
 
+// Routes
+app.use('/api/auth', authRoutes);
 
+// Error middleware - tüm route'lardan sonra eklenmelidir
+app.use(errorHandler);
 
-// Start server
-const startServer = async () => {
+// Initialize database connections
+async function initializeDatabases() {
   try {
     // Connect to MongoDB
-    await connectDB();
-    logger.info('Connected to MongoDB');
-
+    await connectMongoDB();
+    
     // Connect to Redis
-    await setupRedis();
-    logger.info('Connected to Redis');
-
-    // Connect to RabbitMQ
-    await setupRabbitMQ();
-    logger.info('Connected to RabbitMQ');
-
-    // Start Express server
-    app.listen(config.port, () => {
-      logger.info(`Auth service running on port ${config.port} in ${config.nodeEnv} mode`);
-    });
+    await connectRedis();
+    
+    console.log('[Auth Service] All database connections established successfully');
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    console.error('[Auth Service] Failed to initialize databases:', error);
     process.exit(1);
   }
-};
+}
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
+// Import routes (to be implemented)
+// const authRoutes = require('./routes/auth');
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (error) => {
-  logger.error('Unhandled Rejection:', error);
-  process.exit(1);
-});
+// Start the server
+async function startServer() {
+  try {
+    // Initialize database connections first
+    await initializeDatabases();
+    
+    // Apply routes
+    // app.use('/api/auth', authRoutes);
+    
+    // Basic route for testing
+    app.get('/', (req, res) => {
+      res.json({ 
+        service: 'Auth Service',
+        status: 'running',
+        message: 'Auth Service is running with MongoDB and Redis connections' 
+      });
+    });
+    
+    // Start listening
+    app.listen(PORT, () => {
+      console.log(`[Auth Service] Server running on port ${PORT}`);
+    });
+    
+    // Handle application shutdown
+    process.on('SIGINT', async () => {
+      console.log('[Auth Service] Application shutting down...');
+      await closeConnections();
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      console.log('[Auth Service] Application shutting down...');
+      await closeConnections();
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('[Auth Service] Failed to start server:', error);
+    await closeConnections();
+    process.exit(1);
+  }
+}
 
-startServer(); 
+// Start the application
+startServer();
