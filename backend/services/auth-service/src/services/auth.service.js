@@ -43,68 +43,76 @@
         }
 
         async sendVerificationEmail(email) {
-            const user = await User.findOne({ email });
+            try {
+                const user = await User.findOne({ email });
 
-            validateUser(user);
+                validateUser(user);
 
-            validateSendEmailVerifyToken(user.isActive , user.verificationTokenExpiresAt);
+                validateSendEmailVerifyToken(user.isActive , user.verificationTokenExpiresAt);
 
 
-            const verifyCode = generateCode();
-            const hashedCode = hashCode(verifyCode);
+                const verifyCode = generateCode();
+                const hashedCode = hashCode(verifyCode);
 
-            
-            await this.transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: "Verify your email",
-            text: `Your verification code is: ${verifyCode}`,
-            });
+                
+                await this.transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: "Verify your email",
+                text: `Your verification code is: ${verifyCode}`,
+                });
 
-            
+                
 
-            user.verificationToken = hashedCode;
-            user.verificationTokenExpiresAt = (NOW().getTime()) + (1000 * 60 * 5); // 5 dk
-            const val = user.verificationTokenExpiresAt;
-            await user.save();
+                user.verificationToken = hashedCode;
+                user.verificationTokenExpiresAt = (NOW().getTime()) + (1000 * 60 * 5); // 5 dk
+                const val = user.verificationTokenExpiresAt;
+                await user.save();
 
-            
-            const message = {
-                message: successMessages.AUTH_SUCCESS.VERIFICATION_EMAIL_SENT,
-                expiresAt: val
+                
+                const message = {
+                    message: successMessages.AUTH_SUCCESS.VERIFICATION_EMAIL_SENT,
+                    expiresAt: val
+                }
+
+                return message;
+            } catch (error) {
+                throw error;
             }
-
-            return message;
         }
 
         async verifyEmail(email , code) {
-            const user = await User.findOne({ email });
-            validateUser(user);
+            try {
+                const user = await User.findOne({ email });
+                validateUser(user);
 
-            if (user.verificationTokenExpiresAt < NOW()) {
+                if (user.verificationTokenExpiresAt < NOW()) {
+                    user.verificationToken = null;
+                    user.verificationTokenExpiresAt = null;
+                    await user.save();
+                    throw new ForbiddenError(errorMessages.TOKEN.TOKEN_EXPIRED);
+                }
+
+                const isVerified = verifyHashedCode(code, user.verificationToken);
+
+                if (!isVerified) {
+                    throw new ValidationError(errorMessages.TOKEN.TOKEN_INVALID);
+                }
+
+                user.isActive = 'active';
                 user.verificationToken = null;
                 user.verificationTokenExpiresAt = null;
                 await user.save();
-                throw new ForbiddenError(errorMessages.TOKEN.TOKEN_EXPIRED);
+
+                const message = {
+                    message: successMessages.AUTH_SUCCESS.EMAIL_VERIFIED,
+                    user: _formatUserResponse(user)
+                }
+
+                return message;
+            } catch (error) {
+                throw error;
             }
-
-            const isVerified = verifyHashedCode(code, user.verificationToken);
-
-            if (!isVerified) {
-                throw new ValidationError(errorMessages.TOKEN.TOKEN_INVALID);
-            }
-
-            user.isActive = 'active';
-            user.verificationToken = null;
-            user.verificationTokenExpiresAt = null;
-            await user.save();
-
-            const message = {
-                message: successMessages.AUTH_SUCCESS.EMAIL_VERIFIED,
-                user: _formatUserResponse(user)
-            }
-
-            return message;
         }
 
         async register(userData) {
@@ -114,6 +122,7 @@
                     surname: userData.surname,
                     email: userData.email,
                     phone: userData.phone,
+                    password2: userData.password,
                     password: userData.password ? 'provided' : 'missing'
                 });
                 
@@ -142,7 +151,6 @@
                     message: successMessages.AUTH_SUCCESS.USER_CREATED
                 };
             } catch (error) {
-                console.error('Error in register service:', error);
                 throw error;
             }
         }
@@ -180,9 +188,34 @@
             }
         }
 
+        async checkPhone(phone) {
+            try {
+                const user = await User.findOne({ phone });
+                if (user) {
+                    throw new ConflictError(errorMessages.CONFLICT.USER_ALREADY_EXISTS);
+                }
+                return {
+                    message: successMessages.AUTH_SUCCESS.PHONE_CHECKED
+                };
+            } catch (error) {
+                throw error;
+            }
+        }
 
+        async checkEmail(email) {
+            try {
+                const user = await User.findOne({ email });
+                if (user) {
+                    throw new ConflictError(errorMessages.CONFLICT.USER_ALREADY_EXISTS);
+                }
+                return {
+                    message: successMessages.AUTH_SUCCESS.EMAIL_CHECKED
+                };
+            } catch (error) {
+                throw error;
+            }
+        }
     }
-
 
 
     module.exports = new AuthService();

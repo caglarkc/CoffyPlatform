@@ -8,6 +8,8 @@ router.post('/register', asyncHandler(authController.register.bind(authControlle
 router.post('/send-verification-email', asyncHandler(authController.sendVerificationEmail.bind(authController)));
 router.post('/verify-email', asyncHandler(authController.verifyEmail.bind(authController)));
 
+router.get('/check-phone', asyncHandler(authController.checkPhone.bind(authController)));
+router.get('/check-email', asyncHandler(authController.checkEmail.bind(authController)));
 
 router.get('/health', (req, res) => {
     res.status(200).json({ message: 'OK' });

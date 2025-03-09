@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@android:color/black" /> <!-- İç dolgu rengi -->
+    <stroke
+        android:width="2dp"
+        android:color="@color/black" /> <!-- Border rengi ve kalınlığı -->
+    <corners android:radius="0dp" /> <!-- Oval şekil için köşe radius'u gerekli değil, 0 olarak bırakılabilir -->
+</shape>

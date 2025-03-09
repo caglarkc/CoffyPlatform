@@ -8,6 +8,9 @@ const errorHandler = (err, req, res, next) => {
         DatabaseError: 500
     };
 
+    // Sadece hata mesajını konsola yazdır, stack trace olmadan
+    console.error(`Hata: ${err.message}`);
+
     const response = {
         success: false,
         status: statusCodes[err.name] || err.statusCode || 500,
@@ -17,10 +20,11 @@ const errorHandler = (err, req, res, next) => {
         timestamp: new Date().toISOString()
     };
 
-    // Development ortamında stack trace ekle
-    if (process.env.NODE_ENV === 'development') {
-        response.stack = err.stack;
-    }
+    // Development ortamında bile stack trace'i konsola yazdırmıyoruz
+    // if (process.env.NODE_ENV === 'development') {
+    //     console.debug('Stack trace:', err.stack);
+    //     response.stack = err.stack;
+    // }
 
     res.status(response.status).json(response);
 };

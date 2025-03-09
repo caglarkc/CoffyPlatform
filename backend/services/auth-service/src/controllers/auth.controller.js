@@ -6,6 +6,18 @@ class AuthController {
         this.authService = AuthService;
     }
     
+    async checkPhone(req, res, next) {
+        const { phone } = req.query;
+        const message = await this.authService.checkPhone(phone);
+        return res.status(200).json(message);
+    }
+
+    async checkEmail(req, res, next) {
+        const { email } = req.query;
+        const message = await this.authService.checkEmail(email);
+        return res.status(200).json(message);
+    }
+
     async register(req, res, next) {
         try {
             console.log('Register request received:', req.body);
@@ -15,7 +27,7 @@ class AuthController {
             console.log('User registered successfully:', message);
             return res.status(201).json(message);
         } catch (error) {
-            console.error('Error in register controller:', error);
+            // Hata mesajını controller katmanında loglamıyoruz
             // Hatayı error middleware'e iletiyoruz
             next(error);
         }
@@ -28,6 +40,7 @@ class AuthController {
             return res.status(200).json(message);
             
         } catch (error) {
+            // Hata mesajını controller katmanında loglamıyoruz
             next(error);
         }
     }
@@ -39,6 +52,7 @@ class AuthController {
             console.log('Email verified successfully:', message);
             return res.status(200).json(message);
         } catch (error) {
+            // Hata mesajını controller katmanında loglamıyoruz
             next(error);
         }
     }
