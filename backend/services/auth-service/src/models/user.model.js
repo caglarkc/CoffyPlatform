@@ -51,9 +51,24 @@ const userSchema = new mongoose.Schema({
     verificationTokenExpiresAt: {
         type: Date,
         default: null
+    },
+    loginToken: {
+        type: String,
+        default: null
+    },
+    loginTokenExpiresAt: {
+        type: Date,
+        default: null
+    },
+    updateToken: {
+        type: String,
+        default: null
+    },
+    updateTokenExpiresAt: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
-
 
 
 module.exports = mongoose.model('User', userSchema);

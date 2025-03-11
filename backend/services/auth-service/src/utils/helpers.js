@@ -41,7 +41,8 @@ const hashPassword = async (password) => {
 };
 
 const verifyPassword = async (password, hashedPassword) => {
-    return hashPassword(password) === hashedPassword;
+    const computedHash = await hashPassword(password);
+    return computedHash === hashedPassword;
 };
 
 

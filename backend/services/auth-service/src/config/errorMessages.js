@@ -6,12 +6,19 @@ module.exports = {
         INVALID_PASSWORD: 'Geçersiz şifre, şifre en az 8 karakter, en fazla 20 karakter ve en az birer büyük harf, küçük harf ve rakam içermelidir.',
         INVALID_NAME: 'Geçersiz isim, isim en az 3, en fazla 50 karakter ve sadece harflerden oluşmalıdır.',
         INVALID_SURNAME: 'Geçersiz soyisim, soyisim en az 3, en fazla 50 karakter ve sadece harflerden oluşmalıdır.',
+        INVALID_LOGIN_CODE: 'Geçersiz giriş kodu',
+        PASSWORD_WRONG: 'Şifre yanlış',
+        NO_UPDATE: 'Güncelleme yapılmadı',
+        VERIFICATION_TOKEN_EXPIRED: 'Doğrulama kodu süresi doldu',
+        VERIFICATION_CODE: 'Geçersiz doğrulama kodu',
+        NO_PENDING_REQUEST: 'Bekleyen güncelleme isteği bulunamadı',
     },
     NOT_FOUND: {
         USER_NOT_FOUND: 'Kullanıcı bulunamadı',
     },
     FORBIDDEN: {
         USER_ALREADY_ACTIVE: 'Kullanıcı maili doğrulanmış',
+        USER_ALREADY_LOGGED_IN: 'Kullanıcı zaten giriş yapmış',
         USER_BLOCKED: 'Kullanıcı engellendi',
         USER_DELETED: 'Kullanıcı silindi',
         USER_NOT_VERIFIED: 'Kullanıcı maili doğrulanmamış',
@@ -24,7 +31,8 @@ module.exports = {
         TOKEN_NOT_FOUND: 'Token bulunamadı',
         TOKEN_INVALID: 'Token geçersiz',
         TOKEN_CANT_SEND_TIME: "Yeni doğrulama kodu göndermek için en az 1 dakika geçmelidir.",
-    },
+
+    }
 
         
 };

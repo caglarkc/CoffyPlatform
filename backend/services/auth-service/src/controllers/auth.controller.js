@@ -57,6 +57,59 @@ class AuthController {
         }
     }
 
+    async loginWithEmailSendCode(req, res, next) {
+        const { email } = req.query;
+        const message = await this.authService.loginWithEmailSendCode(email);
+        return res.status(200).json(message);
+    }
+
+    async loginWithEmailVerifyCode(req, res, next) {
+        const { email, code } = req.query;
+        const message = await this.authService.loginWithEmailVerifyCode(email, code);
+        return res.status(200).json(message);
+    }
+
+    async loginWithEmailPassword(req, res, next) {
+        const { email, password } = req.query;
+        const message = await this.authService.loginWithEmailPassword(email, password);
+        return res.status(200).json(message);
+    }
+
+    async loginWithPhonePassword(req, res, next) {
+        const { phone, password } = req.query;
+        const message = await this.authService.loginWithPhonePassword(phone, password);
+        return res.status(200).json(message);
+    }
+
+    async logout(req, res, next) {
+        const { userId } = req.query;
+        const message = await this.authService.logout(userId);
+        return res.status(200).json(message);
+    }
+
+    async updateUser(req, res, next) {
+        const { userId, data } = req.body;
+        const message = await this.authService.updateUser(userId, data);
+        return res.status(200).json(message);
+    }
+    
+    async updateUserUniqueRequest(req, res, next) {
+        const { userId, data, type } = req.query;
+        const message = await this.authService.updateUserUniqueRequest(userId, data, type);
+        return res.status(200).json(message);
+    }
+
+    async verifyUpdateRequest(req, res, next) {
+        const { userId, code, type } = req.query;
+        const message = await this.authService.verifyUpdateRequest(userId, code, type);
+        return res.status(200).json(message);
+    }
+
+    
+    
+    
+    
+
     async getTime(req, res, next) {
         const now = () => new Date();
         

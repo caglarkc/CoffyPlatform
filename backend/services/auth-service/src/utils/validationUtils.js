@@ -40,6 +40,18 @@ const validateSendEmailVerifyToken = (isActive, verificationTokenExpiresAt) => {
 
 };
 
+const validateLoginToken = (isLoggedIn, loginTokenExpiresAt) => {
+    if (isLoggedIn) {
+        throw new ForbiddenError(errorMessages.FORBIDDEN.USER_ALREADY_LOGGED_IN);
+    }
+    if (loginTokenExpiresAt) {
+        const timeSpace = loginTokenExpiresAt - NOW();
+        if (timeSpace > 4 * 60 * 1000) {
+            throw new TooManyRequestError(errorMessages.TOKEN.TOKEN_CANT_SEND_TIME);
+        }
+    }
+}
+
 const validateUser = (user) => {
     if (!user) {
         throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
@@ -50,5 +62,6 @@ const validateUser = (user) => {
 module.exports = {
     validateRegister,
     validateSendEmailVerifyToken,
-    validateUser
+    validateUser,
+    validateLoginToken
 };

@@ -8,8 +8,19 @@ router.post('/register', asyncHandler(authController.register.bind(authControlle
 router.post('/send-verification-email', asyncHandler(authController.sendVerificationEmail.bind(authController)));
 router.post('/verify-email', asyncHandler(authController.verifyEmail.bind(authController)));
 
+router.get('/login-with-email-send-code', asyncHandler(authController.loginWithEmailSendCode.bind(authController)));
+router.get('/login-with-email-verify-code', asyncHandler(authController.loginWithEmailVerifyCode.bind(authController)));
+router.get('/login-with-email-password', asyncHandler(authController.loginWithEmailPassword.bind(authController)));
+router.get('/login-with-phone-password', asyncHandler(authController.loginWithPhonePassword.bind(authController)));
+router.get('/logout', asyncHandler(authController.logout.bind(authController)));
 router.get('/check-phone', asyncHandler(authController.checkPhone.bind(authController)));
 router.get('/check-email', asyncHandler(authController.checkEmail.bind(authController)));
+
+router.post('/update-user', asyncHandler(authController.updateUser.bind(authController)));
+router.get('/update-user-unique-request', asyncHandler(authController.updateUserUniqueRequest.bind(authController)));
+router.get('/verify-update-request', asyncHandler(authController.verifyUpdateRequest.bind(authController)));
+
+
 
 router.get('/health', (req, res) => {
     res.status(200).json({ message: 'OK' });

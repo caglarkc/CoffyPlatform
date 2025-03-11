@@ -6,6 +6,15 @@ module.exports = {
         EMAIL_VERIFIED: 'Email doğrulandı',
         PHONE_CHECKED: 'Telefon numarası kontrol edildi',
         EMAIL_CHECKED: 'Email kontrol edildi',
+        LOGIN_CODE_SENT: 'Giriş kodu gönderildi',
+        LOGOUT_SUCCESS: 'Çıkış yapıldı',
+        LOGIN_SUCCESS: 'Giriş yapıldı',
+        USER_UPDATED: 'Kullanıcı bilgileri güncellendi',
+        PASSWORD_UPDATED: 'Şifre güncellendi',
+        NAME_UPDATED: 'İsim güncellendi',
+        SURNAME_UPDATED: 'Soyisim güncellendi',
+        EMAIL_UPDATED: 'Email güncellendi',
+        PHONE_UPDATED: 'Telefon numarası güncellendi',
     }
 };
 
