@@ -229,4 +229,4 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 Proje Sahibi - alicaglarkocer@gmail.com
 
-Proje Linki: [https://github.com/caglarkc/coffy](https://github.com/caglarkc/coffy)
+Proje Linki: [https://github.com/caglarkc/coffy](https://github.com/caglarkc/CoffyPlatform)
