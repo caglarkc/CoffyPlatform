@@ -53,21 +53,93 @@
             android:fontFamily="@font/lato_regular"
             android:layout_height="wrap_content"/>
 
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/button_login_toggle">
 
-        <TextView
-            android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:padding="2dp">
+
+                <Button
+                    android:id="@+id/buttonPhoneLogin"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="Telefon"
+                    android:textSize="14sp"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/lato_regular"
+                    android:background="@drawable/button_login_selected"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:backgroundTint="@null"/>
+
+                <Button
+                    android:id="@+id/buttonEmailLogin"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="E-posta"
+                    android:textSize="14sp"
+                    android:textColor="@color/orange"
+                    android:fontFamily="@font/lato_regular"
+                    android:background="@android:color/transparent"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null"
+                    app:backgroundTint="@null"/>
+
+            </LinearLayout>
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
             android:layout_marginTop="30dp"
             android:layout_marginEnd="15dp"
-            android:text="Telefon Numarası"
-            android:textColor="@color/import_text_color"
-            android:textSize="18sp"
-            android:fontFamily="@font/lato_bold"
-            android:layout_height="wrap_content"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/textViewLoginCapital"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Telefon Numarası"
+                android:textColor="@color/import_text_color"
+                android:textSize="18sp"
+                android:paddingBottom="3dp"
+                android:fontFamily="@font/lato_bold"/>
+
+
+            <Button
+                android:layout_width="wrap_content"
+                android:id="@+id/buttonLoginWithCode"
+                android:layout_height="wrap_content"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:text="Kod ile giriş için tıkla"
+                android:textAllCaps="false"
+                android:fontFamily="@font/lato_regular"
+                android:textSize="14sp"
+                android:textColor="@color/light_blue"
+                android:background="@android:color/transparent"
+                android:padding="4dp"
+                app:backgroundTint="@null"/>
+
+        </LinearLayout>
 
         <EditText
             android:layout_width="match_parent"
-            android:id="@+id/editTextPhone"
+            android:inputType="number"
+            android:id="@+id/editTextLoginField"
             android:padding="20dp"
             android:paddingStart="30dp"
             android:hint="Telefon Numarası"
@@ -78,6 +150,48 @@
             android:layout_marginTop="10dp"
             android:layout_marginEnd="15dp"
             android:layout_height="wrap_content"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:id="@+id/textViewPassword"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="30dp"
+            android:layout_marginEnd="15dp"
+            android:text="Şifre"
+            android:textColor="@color/import_text_color"
+            android:textSize="18sp"
+            android:fontFamily="@font/lato_bold"
+            android:layout_height="wrap_content"/>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="15dp"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:layout_width="match_parent"
+                android:id="@+id/editTextPassword"
+                android:padding="20dp"
+                android:inputType="textPassword"
+                android:paddingStart="30dp"
+                android:hint="*******"
+                android:textColor="@color/dark_text_color"
+                android:textColorHint="@color/hint_color"
+                android:background="@drawable/edit_text_border"
+                android:layout_height="wrap_content"/>
+
+            <ImageButton
+                android:id="@+id/imageButtonShowPassword"
+                android:layout_width="28dp"
+                android:scaleType="fitCenter"
+                android:layout_height="28dp"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="15dp"
+                android:background="@drawable/eye_visible_icon" />
+
+        </FrameLayout>
 
         <Button
             android:layout_width="match_parent"

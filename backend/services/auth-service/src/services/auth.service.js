@@ -2,7 +2,7 @@ const User = require('../models/user.model');
 const nodemailer = require('nodemailer');
 const { generateCode , hashCode , verifyHashedCode , hashPassword , verifyPassword } = require('../utils/helpers');
 const { createLog } = require('./log.service');
-const { NOW } = require('../utils/constants/time');
+const { NOW, FORMAT_EXPIRES_AT } = require('../utils/constants/time');
 const { validateRegister , validateSendEmailVerifyToken , validateUser, validateLoginToken } = require('../utils/validationUtils');
 const { validateName , validateSurname , validatePassword , validateEmail , validatePhone } = require('../utils/textUtils');
 const errorMessages = require('../config/errorMessages');
@@ -72,7 +72,7 @@ class AuthService {
             
             const message = {
                 message: successMessages.AUTH_SUCCESS.VERIFICATION_EMAIL_SENT,
-                expiresAt: val
+                expiresAt: FORMAT_EXPIRES_AT(val)
             }
 
             return message;
@@ -245,7 +245,7 @@ class AuthService {
             
             const message = {
                 message: successMessages.AUTH_SUCCESS.LOGIN_CODE_SENT,
-                expiresAt: val
+                expiresAt: FORMAT_EXPIRES_AT(val)
             }
 
             return message;
@@ -367,62 +367,118 @@ class AuthService {
             throw error;
         }
     }
- 
-    async getUser(userId) {
-        
-    }
 
-    async updateUser(userId, userData) {
+    async updateUser(requestBody) {
         try {
-            const user = await User.findById(userId);
+            // Validate user exists
+            const user = await User.findById(requestBody.userId);
             validateUser(user);
             
+            // Check if all values are 'default' - no actual updates requested
+            const allDefault = requestBody.password === 'default' && 
+                             requestBody.name === 'default' && 
+                             requestBody.surname === 'default';
+            
+            if (allDefault) {
+                throw new ValidationError(errorMessages.INVALID.NO_INFORMATION_PROVIDED);
+            }
+
+            // Track update status
             let isUpdated = false;
-            const message = {};
-    
-            // Password kontrolü ve güncelleme
-            if (userData.password && userData.password !== 'default') {
-                validatePassword(userData.password);
-                // Yeni şifreyi hashle ve kaydet
-                user.password = await hashPassword(userData.password);
-                isUpdated = true;
-                message.password = successMessages.AUTH_SUCCESS.PASSWORD_UPDATED;
+            let messageText = '';
+            let fieldsChecked = 0;
+            let fieldsUnchanged = 0;
+            
+            // Password validation and update
+            if (requestBody.password && requestBody.password !== 'default') {
+                fieldsChecked++;
+                try {
+                    validatePassword(requestBody.password);
+                    const hashedPassword = await hashPassword(requestBody.password);
+                    if (user.password !== hashedPassword) {
+                        user.password = hashedPassword;
+                        isUpdated = true;
+                        messageText += successMessages.AUTH_SUCCESS.PASSWORD_UPDATED + ' ';
+                    } else {
+                        fieldsUnchanged++;
+                    }
+                } catch (validationError) {
+                    throw new ValidationError(errorMessages.INVALID.PASSWORD + ': ' + validationError.message);
+                }
             }
     
-            // İsim kontrolü ve güncelleme
-            if (userData.name && userData.name !== 'default') {
-                validateName(userData.name);
-                user.name = userData.name;
-                isUpdated = true;
-                message.name = successMessages.AUTH_SUCCESS.NAME_UPDATED;
+            // Name validation and update
+            if (requestBody.name && requestBody.name !== 'default') {
+                fieldsChecked++;
+                try {
+                    validateName(requestBody.name);
+                    if (user.name !== requestBody.name) {
+                        user.name = requestBody.name;
+                        isUpdated = true;
+                        messageText += successMessages.AUTH_SUCCESS.NAME_UPDATED + ' ';
+                    } else {
+                        fieldsUnchanged++;
+                    }
+                } catch (validationError) {
+                    throw new ValidationError(errorMessages.INVALID.NAME + ': ' + validationError.message);
+                }
             }
     
-            // Soyisim kontrolü ve güncelleme
-            if (userData.surname && userData.surname !== 'default') {
-                validateSurname(userData.surname);
-                user.surname = userData.surname;
-                isUpdated = true;
-                message.surname = successMessages.AUTH_SUCCESS.SURNAME_UPDATED;
+            // Surname validation and update
+            if (requestBody.surname && requestBody.surname !== 'default') {
+                fieldsChecked++;
+                try {
+                    validateSurname(requestBody.surname);
+                    if (user.surname !== requestBody.surname) {
+                        user.surname = requestBody.surname;
+                        isUpdated = true;
+                        messageText += successMessages.AUTH_SUCCESS.SURNAME_UPDATED + ' ';
+                    } else {
+                        fieldsUnchanged++;
+                    }
+                } catch (validationError) {
+                    throw new ValidationError(errorMessages.INVALID.SURNAME + ': ' + validationError.message);
+                }
+            }
+
+            // Check if any fields were provided for update
+            if (fieldsChecked === 0) {
+                throw new ValidationError(errorMessages.INVALID.NO_INFORMATION_PROVIDED);
+            }
+
+            // Check if all provided values are the same as current values
+            if (fieldsChecked > 0 && fieldsChecked === fieldsUnchanged) {
+                throw new ValidationError(errorMessages.INVALID.ALL_VALUES_SAME);
             }
     
-            // Eğer herhangi bir güncelleme yapıldıysa kaydet
+            // Save changes if any updates were made
             if (isUpdated) {
                 await user.save();
-                const updatedUser = await User.findById(userId);
+                const updatedUser = await User.findById(requestBody.userId);
                 return {
-                    message: message,
-                    user: _formatUserResponse(updatedUser)
+                    message: messageText.trim(),
+                    user: _formatUserResponse(updatedUser),
+                    success: true
+                };
+            } else {
+                // This should not happen with the above checks, but keeping as a fallback
+                return {
+                    message: errorMessages.INVALID.NO_UPDATE,
+                    user: _formatUserResponse(user),
+                    success: false
                 };
             }
-    
-            // Hiç güncelleme yapılmadıysa
-            return {
-                message: errorMessages.INVALID.NO_UPDATE,
-                user: _formatUserResponse(user)
-            };
-    
         } catch (error) {
-            throw error;
+            // Enhance error with more context if needed
+            if (error instanceof ValidationError || 
+                error instanceof ConflictError || 
+                error instanceof ForbiddenError) {
+                throw error;
+            } else {
+                // For unexpected errors, provide a generic message but log the actual error
+                console.error('Error in updateUser:', error);
+                throw new Error(errorMessages.INTERNAL.SERVER_ERROR);
+            }
         }
     }
 
@@ -458,7 +514,7 @@ class AuthService {
             // Email gönder
             await this.transporter.sendMail({
                 from: process.env.EMAIL_USER,
-                to: data,
+                to: user.email,
                 subject: "Değişikliği Doğrulama",
                 text: `Değişikliği doğrulama kodunuz: ${verifyCode}`,
             });
@@ -478,7 +534,7 @@ class AuthService {
             // Kullanıcıya güncelleme isteği yapıldığını bildir
             return {
                 message: successMessages.AUTH_SUCCESS.VERIFICATION_EMAIL_SENT,
-                expiresAt: NOW().getTime() + (1000 * 60 * 5) // 5 dakika
+                expiresAt: FORMAT_EXPIRES_AT(NOW().getTime() + (1000 * 60 * 5)) // 5 dakika
             };
     
         } catch (error) {
@@ -491,9 +547,9 @@ class AuthService {
             const user = await User.findById(userId);
             validateUser(user);
 
+
             const redisClient = getRedisClient();
             const redisKey = `user:${userId}:update:${type}`;
-            
             // Redis'ten güncelleme verilerini al
             const updateDataStr = await redisClient.get(redisKey);
             
@@ -531,8 +587,45 @@ class AuthService {
             throw error;
         }
     }
+
+    async cancelUpdateRequest(userId, type) {
+        try {
+            const user = await User.findById(userId);
+            validateUser(user);
+            
+            const redisClient = getRedisClient();
+            const redisKey = `user:${userId}:update:${type}`;
+            // Redis'ten güncelleme verilerini al
+            const updateDataStr = await redisClient.get(redisKey);
+            
+            if (!updateDataStr) {
+                throw new ValidationError(errorMessages.INVALID.VERIFICATION_TOKEN_EXPIRED);
+            }
+
+            await redisClient.del(redisKey);
+
+            return {
+                message: successMessages.AUTH_SUCCESS.UPDATE_REQUEST_CANCELLED
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
     
-    
+
+    async getUser(userId) {
+        try {
+            const user = await User.findById(userId);
+            validateUser(user);
+            const message = {
+                message: successMessages.AUTH_SUCCESS.USER_FOUND,
+                user: _formatUserResponse(user)
+            }
+            return message;
+        } catch (error) {
+            throw error;
+        }
+    }
 
 
 
@@ -540,44 +633,3 @@ class AuthService {
 
 
 module.exports = new AuthService();
-
-/*
-async updateUserEmailVerify(userId, code) {
-        try {
-            const user = await User.findById(userId);
-            validateUser(user);
-    
-            if (!user.pendingEmail || !user.emailChangeToken) {
-                throw new ValidationError(errorMessages.INVALID.NO_PENDING_EMAIL_CHANGE);
-            }
-    
-            if (user.emailChangeTokenExpiresAt < NOW()) {
-                user.pendingEmail = null;
-                user.emailChangeToken = null;
-                user.emailChangeTokenExpiresAt = null;
-                await user.save();
-                throw new ForbiddenError(errorMessages.TOKEN.TOKEN_EXPIRED);
-            }
-    
-            const isVerified = verifyHashedCode(code, user.emailChangeToken);
-            if (!isVerified) {
-                throw new ValidationError(errorMessages.TOKEN.TOKEN_INVALID);
-            }
-    
-            // Email'i güncelle
-            user.email = user.pendingEmail;
-            user.pendingEmail = null;
-            user.emailChangeToken = null;
-            user.emailChangeTokenExpiresAt = null;
-            await user.save();
-    
-            return {
-                message: successMessages.AUTH_SUCCESS.EMAIL_UPDATED,
-                user: _formatUserResponse(user)
-            };
-    
-        } catch (error) {
-            throw error;
-        }
-    }
-*/

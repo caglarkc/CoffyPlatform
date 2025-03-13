@@ -18,7 +18,7 @@ public class MainMethods {
         if (string.length()<2) {
             return false;
         }
-        else if (string.matches(".*[0-9].*")) {
+        if (string.matches(".*[0-9].*")) {
             return false;
         }
         else {
