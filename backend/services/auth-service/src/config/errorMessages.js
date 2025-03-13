@@ -8,9 +8,11 @@ module.exports = {
         INVALID_SURNAME: 'Geçersiz soyisim, soyisim en az 3, en fazla 50 karakter ve sadece harflerden oluşmalıdır.',
         INVALID_LOGIN_CODE: 'Geçersiz giriş kodu',
         PASSWORD_WRONG: 'Şifre yanlış',
-        NO_UPDATE: 'Güncelleme yapılmadı',
+        NO_UPDATE: 'Bilgiler güncellenemedi',
+        ALL_VALUES_SAME: 'Güncelleme yapılmadı, tüm değerler aynıdır.',
         VERIFICATION_TOKEN_EXPIRED: 'Doğrulama kodu süresi doldu',
         VERIFICATION_CODE: 'Geçersiz doğrulama kodu',
+        NO_INFORMATION_PROVIDED: 'Bilgiler sağlanmadı',
         NO_PENDING_REQUEST: 'Bekleyen güncelleme isteği bulunamadı',
     },
     NOT_FOUND: {

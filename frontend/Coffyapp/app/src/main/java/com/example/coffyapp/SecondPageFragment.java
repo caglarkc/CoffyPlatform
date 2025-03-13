@@ -20,7 +20,7 @@ public class SecondPageFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_first_page, container , false);
+        View view = inflater.inflate(R.layout.fragment_second_page, container , false);
 
         buttonSkip = view.findViewById(R.id.buttonSkip);
         imageButtonBack = view.findViewById(R.id.imageButtonBack);

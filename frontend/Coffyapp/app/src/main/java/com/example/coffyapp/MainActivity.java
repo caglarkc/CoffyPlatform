@@ -1,13 +1,10 @@
 package com.example.coffyapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.TextUtils;
 
-import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,17 +15,13 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.google.gson.Gson;
-import com.google.gson.annotations.SerializedName;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-import retrofit2.http.Body;
-import retrofit2.http.POST;
 
 public class MainActivity extends AppCompatActivity {
+
+    SharedPreferences sharedUser;
+
+    String sharedUserUid;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,6 +38,10 @@ public class MainActivity extends AppCompatActivity {
                     .add(R.id.fragment_container, new FirstPageFragment())
                     .commit();
         }
+
+
+        sharedUser = getSharedPreferences("user_data",MODE_PRIVATE);
+        sharedUserUid = sharedUser.getString("user_uid","");
 
     }
 
@@ -74,7 +71,12 @@ public class MainActivity extends AppCompatActivity {
         transaction.commit();
     }
     public void goLoginPage() {
-        Intent intent = new Intent(MainActivity.this,LoginActivity.class);
+        Intent intent;
+        if (!TextUtils.isEmpty(sharedUserUid)) {
+            intent = new Intent(MainActivity.this,UserProfileActivity.class);
+        }else {
+            intent = new Intent(MainActivity.this,LoginActivity.class);
+        }
         startActivity(intent);
         finish();
     }

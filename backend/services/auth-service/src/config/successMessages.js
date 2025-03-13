@@ -15,6 +15,8 @@ module.exports = {
         SURNAME_UPDATED: 'Soyisim güncellendi',
         EMAIL_UPDATED: 'Email güncellendi',
         PHONE_UPDATED: 'Telefon numarası güncellendi',
+        USER_FOUND: 'Kullanıcı bulundu',
+        UPDATE_REQUEST_CANCELLED: 'Güncelleme isteği iptal edildi',
     }
 };
 

@@ -192,19 +192,19 @@ public class RegisterFirstPhaseFragment extends Fragment {
                 }
 
                 // 3. İsim doğrulaması: En az 2 harf ve sadece harf içermeli
-                if (MainMethods.isStringFormatted(name)) {
+                if (!MainMethods.isStringFormatted(name)) {
                     Toast.makeText(getContext(), "İsim en az 2 harf içermeli ve sadece harflerden oluşmalıdır!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
                 // 4. Soyisim doğrulaması: En az 2 harf ve sadece harf içermeli
-                if (MainMethods.isStringFormatted(surname)) {
+                if (!MainMethods.isStringFormatted(surname)) {
                     Toast.makeText(getContext(), "Soyisim en az 2 harf içermeli ve sadece harflerden oluşmalıdır!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
                 // 5. Şifre doğrulaması: En az 8 karakter, bir büyük harf, bir küçük harf ve bir sayı içermeli
-                if (MainMethods.isPasswordStrongEnough(password)) {
+                if (!MainMethods.isPasswordStrongEnough(password)) {
                     Toast.makeText(getContext(), "Şifre en az 8 karakter, bir büyük harf, bir küçük harf ve bir sayı içermelidir!", Toast.LENGTH_SHORT).show();
                     return;
                 }

@@ -167,6 +167,52 @@ lint/tmp/
 # Android Profiling
 *.hprof
 
+# ===== FRONTEND/REACT =====
+# dependencies
+/admin-panel/node_modules
+/admin-panel/.pnp
+/admin-panel/.pnp.js
+
+# testing
+/admin-panel/coverage
+
+# production
+/admin-panel/build
+
+# misc
+/admin-panel/.env.local
+/admin-panel/.env.development.local
+/admin-panel/.env.test.local
+/admin-panel/.env.production.local
+
+/admin-panel/npm-debug.log*
+/admin-panel/yarn-debug.log*
+/admin-panel/yarn-error.log*
+
+# ===== AUTH SERVICE =====
+# Environment variables
+/backend/services/auth-service/.env
+/backend/services/auth-service/.env.local
+/backend/services/auth-service/.env.development
+/backend/services/auth-service/.env.test
+/backend/services/auth-service/.env.production
+
+# Logs
+/backend/services/auth-service/logs/
+/backend/services/auth-service/*.log
+
+# Dependencies
+/backend/services/auth-service/node_modules/
+
+# Build directory
+/backend/services/auth-service/dist/
+/backend/services/auth-service/build/
+
+# Debug logs
+/backend/services/auth-service/npm-debug.log*
+/backend/services/auth-service/yarn-debug.log*
+/backend/services/auth-service/yarn-error.log*
+
 # ===== GENERAL =====
 # OS generated files
 .DS_Store

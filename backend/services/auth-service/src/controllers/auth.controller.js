@@ -88,8 +88,8 @@ class AuthController {
     }
 
     async updateUser(req, res, next) {
-        const { userId, data } = req.body;
-        const message = await this.authService.updateUser(userId, data);
+        console.log(req.body);
+        const message = await this.authService.updateUser(req.body);
         return res.status(200).json(message);
     }
     
@@ -102,6 +102,18 @@ class AuthController {
     async verifyUpdateRequest(req, res, next) {
         const { userId, code, type } = req.query;
         const message = await this.authService.verifyUpdateRequest(userId, code, type);
+        return res.status(200).json(message);
+    }
+
+    async getUser(req, res, next) {
+        const { userId } = req.query;
+        const message = await this.authService.getUser(userId);
+        return res.status(200).json(message);
+    }
+
+    async cancelUpdateRequest(req, res, next) {
+        const { userId, type } = req.query;
+        const message = await this.authService.cancelUpdateRequest(userId, type);
         return res.status(200).json(message);
     }
 

@@ -19,7 +19,8 @@ router.get('/check-email', asyncHandler(authController.checkEmail.bind(authContr
 router.post('/update-user', asyncHandler(authController.updateUser.bind(authController)));
 router.get('/update-user-unique-request', asyncHandler(authController.updateUserUniqueRequest.bind(authController)));
 router.get('/verify-update-request', asyncHandler(authController.verifyUpdateRequest.bind(authController)));
-
+router.get('/get-user', asyncHandler(authController.getUser.bind(authController)));
+router.get('/cancel-update-request', asyncHandler(authController.cancelUpdateRequest.bind(authController)));
 
 
 router.get('/health', (req, res) => {

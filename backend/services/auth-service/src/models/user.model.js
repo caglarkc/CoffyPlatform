@@ -59,14 +59,6 @@ const userSchema = new mongoose.Schema({
     loginTokenExpiresAt: {
         type: Date,
         default: null
-    },
-    updateToken: {
-        type: String,
-        default: null
-    },
-    updateTokenExpiresAt: {
-        type: Date,
-        default: null
     }
 }, { timestamps: true });
 
