@@ -1,0 +1,66 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+}
+
+/* Form stilleri */
+.form-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Yükleme göstergesi stilleri */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* Kart stilleri */
+.card-container {
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.card-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard istatistik kartları */
+.stats-card {
+  text-align: center;
+  padding: 20px;
+}
+
+.stats-card-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.stats-card-value {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+/* Butanlar için hover efektleri */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
