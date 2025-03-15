@@ -15,20 +15,8 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       try {
         if (authService.isAuthenticated()) {
-          const user = authService.getCurrentUser();
+          const user = authService.getCurrentAdmin();
           setCurrentUser(user);
-          
-          // Kullanıcı bilgilerini sunucudan güncelle
-          try {
-            const refreshedUser = await authService.refreshUserData();
-            setCurrentUser(refreshedUser);
-          } catch (refreshError) {
-            console.error('Kullanıcı bilgileri güncellenemedi:', refreshError);
-            // Ciddi bir hata varsa (örneğin token geçersizse) logout yap
-            if (refreshError.response && refreshError.response.status === 401) {
-              await logout();
-            }
-          }
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
@@ -47,10 +35,25 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       const data = await authService.login(email, password);
-      setCurrentUser(data.user);
+      setCurrentUser(data.admin);
       return data;
     } catch (err) {
       setError(err.response?.data?.message || 'Giriş başarısız');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Register fonksiyonu (Sadece Creator yapabilir)
+  const registerAdmin = async (adminData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await authService.registerAdmin(adminData);
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Kayıt başarısız');
       throw err;
     } finally {
       setLoading(false);
@@ -77,7 +80,10 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
-    isAdmin: () => authService.isAdmin(),
+    registerAdmin,
+    isCreator: () => authService.isCreator(),
+    hasRole: (roleType) => authService.hasRole(roleType),
+    hasRoleLevel: (roleCode) => authService.hasRoleLevel(roleCode),
     isAuthenticated: () => authService.isAuthenticated()
   };
 

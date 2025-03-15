@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import UserList from './pages/UserManagement/UserList';
+import AddAdmin from './pages/UserManagement/AddAdmin';
 import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
 import './App.css';
@@ -46,6 +47,14 @@ const AppRoutes = () => {
         <ProtectedRoute>
           <Layout>
             <UserList />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/users/add" element={
+        <ProtectedRoute>
+          <Layout>
+            <AddAdmin />
           </Layout>
         </ProtectedRoute>
       } />

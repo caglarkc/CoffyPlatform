@@ -31,26 +31,41 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     // Eğer 401 hatası alırsak ve bu token yenileme isteği değilse
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         // Token yenileme işlemi
-        const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('http://localhost:3001/api/auth/refresh-token', {
-          refreshToken,
+        const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+        if (!admin.email) {
+          throw new Error('Admin bilgisi bulunamadı');
+        }
+        
+        // Backend'e email parametresi ile istek gönder
+        const response = await axios.get('http://localhost:3001/api/admin/refresh-access-token', {
+          params: { email: admin.email }
         });
         
-        const { accessToken } = response.data;
-        localStorage.setItem('accessToken', accessToken);
-        
-        // Yeni token ile isteği tekrarla
-        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
-        return api(originalRequest);
+        // Yeni token bilgilerini kaydet
+        if (response.data && response.data.accessToken) {
+          localStorage.setItem('accessToken', response.data.accessToken);
+          
+          if (response.data.accessTokenExpiresAt) {
+            localStorage.setItem('tokenExpiry', response.data.accessTokenExpiresAt);
+          }
+          
+          // Yeni token ile isteği tekrarla
+          originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+          return api(originalRequest);
+        } else {
+          throw new Error('Token yenileme başarısız');
+        }
       } catch (refreshError) {
         // Refresh token geçersizse kullanıcıyı logout yap
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('admin');
+        localStorage.removeItem('tokenExpiry');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
