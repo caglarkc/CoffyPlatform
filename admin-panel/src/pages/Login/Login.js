@@ -10,7 +10,6 @@ import {
   CardContent,
   Alert,
   CircularProgress,
-  Link,
   InputAdornment,
   IconButton
 } from '@mui/material';
@@ -21,37 +20,40 @@ import { validateEmail, validatePassword } from '../../utils/validators';
 const Login = () => {
   const navigate = useNavigate();
   const { login, loading, error } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
+  
+  // Login state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginErrors, setLoginErrors] = useState({});
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
+  // Login form işlemleri
+  const handleLoginEmailChange = (e) => {
+    setLoginEmail(e.target.value);
     const emailError = validateEmail(e.target.value);
-    setErrors(prev => ({ ...prev, email: emailError }));
+    setLoginErrors(prev => ({ ...prev, email: emailError }));
   };
 
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
+  const handleLoginPasswordChange = (e) => {
+    setLoginPassword(e.target.value);
     const passwordError = validatePassword(e.target.value);
-    setErrors(prev => ({ ...prev, password: passwordError }));
+    setLoginErrors(prev => ({ ...prev, password: passwordError }));
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(prev => !prev);
+  const toggleShowLoginPassword = () => {
+    setShowLoginPassword(prev => !prev);
   };
 
-  const handleSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
     // Form doğrulama
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
+    const emailError = validateEmail(loginEmail);
+    const passwordError = validatePassword(loginPassword);
 
     if (emailError || passwordError) {
-      setErrors({
+      setLoginErrors({
         email: emailError,
         password: passwordError
       });
@@ -60,15 +62,19 @@ const Login = () => {
 
     try {
       setLoginError('');
-      await login(email, password);
-      navigate('/dashboard');
+      const result = await login(loginEmail, loginPassword);
+      
+      // Başarılı giriş sonrası dashboard'a yönlendir
+      if (result && result.admin) {
+        navigate('/dashboard');
+      }
     } catch (error) {
       setLoginError(error.response?.data?.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="sm">
       <Box
         sx={{
           marginTop: 8,
@@ -83,17 +89,17 @@ const Login = () => {
         
         <Card sx={{ width: '100%', mt: 2 }}>
           <CardContent>
-            <Typography component="h2" variant="h5" textAlign="center" gutterBottom>
-              Giriş Yap
+            <Typography component="h2" variant="h5" align="center" gutterBottom>
+              Admin Girişi
             </Typography>
-
+            
             {loginError && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {loginError}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+            <Box component="form" onSubmit={handleLoginSubmit} noValidate>
               <TextField
                 margin="normal"
                 required
@@ -103,10 +109,10 @@ const Login = () => {
                 name="email"
                 autoComplete="email"
                 autoFocus
-                value={email}
-                onChange={handleEmailChange}
-                error={!!errors.email}
-                helperText={errors.email}
+                value={loginEmail}
+                onChange={handleLoginEmailChange}
+                error={!!loginErrors.email}
+                helperText={loginErrors.email}
                 disabled={loading}
               />
               <TextField
@@ -115,23 +121,23 @@ const Login = () => {
                 fullWidth
                 name="password"
                 label="Şifre"
-                type={showPassword ? 'text' : 'password'}
+                type={showLoginPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="current-password"
-                value={password}
-                onChange={handlePasswordChange}
-                error={!!errors.password}
-                helperText={errors.password}
+                value={loginPassword}
+                onChange={handleLoginPasswordChange}
+                error={!!loginErrors.password}
+                helperText={loginErrors.password}
                 disabled={loading}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         aria-label="toggle password visibility"
-                        onClick={toggleShowPassword}
+                        onClick={toggleShowLoginPassword}
                         edge="end"
                       >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showLoginPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -146,11 +152,10 @@ const Login = () => {
               >
                 {loading ? <CircularProgress size={24} /> : 'Giriş Yap'}
               </Button>
-              <Box sx={{ textAlign: 'center' }}>
-                <Link href="#" variant="body2">
-                  Şifrenizi mi unuttunuz?
-                </Link>
-              </Box>
+              
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Not: Yeni admin kayıtları sadece yetkili adminler tarafından yapılabilir. Lütfen giriş yaparak yönetim paneline erişin.
+              </Alert>
             </Box>
           </CardContent>
         </Card>
