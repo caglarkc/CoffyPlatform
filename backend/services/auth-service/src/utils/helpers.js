@@ -45,11 +45,66 @@ const verifyPassword = async (password, hashedPassword) => {
     return computedHash === hashedPassword;
 };
 
+const hashCreaterData = (data) => {
+    const secret = process.env.CREATER_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(data);
+    const hashedData = hmac.digest('hex');
+    return hashedData;
+};
+
+const hashAdminData = (data) => {
+    const secret = process.env.ADMIN_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(data);
+    const hashedData = hmac.digest('hex');
+    return hashedData;
+};
+
+const verifyAdminData = (data, hashedData) => {
+    const secret = process.env.ADMIN_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(data);
+    const hashedInputData = hmac.digest('hex');
+    return hashedInputData === hashedData;
+};
+
+const verifyCreaterData = (data, hashedData) => {
+    const secret = process.env.CREATER_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(data);
+    const hashedInputData = hmac.digest('hex');
+    return hashedInputData === hashedData;
+};
+
+const verifyCreatorEmail = (email) => {
+    const secret = process.env.CREATER_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(email);
+    const hashedInputEmail = hmac.digest('hex');
+    const hashedCreatorEmail = hashCreaterData(process.env.CREATER_EMAIL);
+    return hashedInputEmail === hashedCreatorEmail;
+};
+
+const verifyCreatorPassword = (password) => {
+    const secret = process.env.CREATER_SECRET_KEY;
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(password);
+    const hashedInputPassword = hmac.digest('hex');
+    const hashedCreatorPassword = hashCreaterData(process.env.CREATER_PASSWORD);
+    return hashedInputPassword === hashedCreatorPassword;
+};
 
 module.exports = {
     generateCode,
     hashCode,
     verifyHashedCode,
     hashPassword,
-    verifyPassword
+    verifyPassword,
+    hashCreaterData,
+    verifyCreaterData,
+    hashAdminData,
+    verifyAdminData,
+    verifyCreatorEmail,
+    verifyCreatorPassword
 };

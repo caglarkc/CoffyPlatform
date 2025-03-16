@@ -14,6 +14,9 @@ module.exports = {
         VERIFICATION_CODE: 'Geçersiz doğrulama kodu',
         NO_INFORMATION_PROVIDED: 'Bilgiler sağlanmadı',
         NO_PENDING_REQUEST: 'Bekleyen güncelleme isteği bulunamadı',
+        REFRESH_TOKEN_REQUIRED: 'Refresh token gereklidir',
+        INVALID_REFRESH_TOKEN: 'Geçersiz refresh token',
+        ADMIN_NOT_FOUND: 'Admin bulunamadı',
     },
     NOT_FOUND: {
         USER_NOT_FOUND: 'Kullanıcı bulunamadı',
@@ -24,9 +27,15 @@ module.exports = {
         USER_BLOCKED: 'Kullanıcı engellendi',
         USER_DELETED: 'Kullanıcı silindi',
         USER_NOT_VERIFIED: 'Kullanıcı maili doğrulanmamış',
+        INSUFFICIENT_PERMISSIONS: 'Yetersiz yetki',
     },
     CONFLICT: {
         USER_ALREADY_EXISTS: 'Kullanıcı zaten mevcut',
+        PHONE_ALREADY_EXISTS: 'Telefon numarası zaten mevcut',
+        EMAIL_ALREADY_EXISTS: 'Email zaten mevcut',
+        ADMIN_ALREADY_EXISTS: 'Admin zaten mevcut',
+        ROLE_IS_SAME_OR_BETTER: 'Rol aynı veya daha yüksek bir rol mevcut',
+        ROLE_IS_SAME_OR_LOWER: 'Rol aynı veya daha düşük bir rol mevcut',
     },
     TOKEN: {
         TOKEN_EXPIRED: 'Token süresi doldu',

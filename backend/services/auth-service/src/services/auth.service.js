@@ -11,8 +11,6 @@ const ForbiddenError = require('../utils/errors/ForbiddenError');
 const ValidationError = require('../utils/errors/ValidationError');
 const successMessages = require('../config/successMessages');
 const { getRedisClient } = require('../utils/database');
-
-
 // Kullanıcı bilgilerini filtreleme yardımcı metodu
 const _formatUserResponse = (user) => {
     return {
@@ -62,17 +60,22 @@ class AuthService {
             text: `Your verification code is: ${verifyCode}`,
             });
 
+            // Redis'e geçici olarak yeni veriyi ve doğrulama kodunu sakla
+            const redisClient = getRedisClient();
+            const redisKey = `user:${user._id}:verify:email`;
+            const updateData = {
+                value: verifyCode,
+                code: hashedCode,
+                userId: user._id
+            };
             
-
-            user.verificationToken = hashedCode;
-            user.verificationTokenExpiresAt = (NOW().getTime()) + (1000 * 60 * 5); // 5 dk
-            const val = user.verificationTokenExpiresAt;
-            await user.save();
+            // 5 dakika (300 saniye) sonra otomatik silinecek şekilde Redis'e kaydet
+            await redisClient.setEx(redisKey, 300, JSON.stringify(updateData));
 
             
             const message = {
                 message: successMessages.AUTH_SUCCESS.VERIFICATION_EMAIL_SENT,
-                expiresAt: FORMAT_EXPIRES_AT(val)
+                expiresAt: FORMAT_EXPIRES_AT(NOW().getTime() + (1000 * 60 * 5)) // 5 dakika
             }
 
             return message;
@@ -86,23 +89,24 @@ class AuthService {
             const user = await User.findOne({ email });
             validateUser(user);
 
-            if (user.verificationTokenExpiresAt < NOW()) {
-                user.verificationToken = null;
-                user.verificationTokenExpiresAt = null;
-                await user.save();
-                throw new ForbiddenError(errorMessages.TOKEN.TOKEN_EXPIRED);
+            const redisClient = getRedisClient();
+            const redisKey = `user:${user._id}:verify:email`;
+            const updateDataStr = await redisClient.get(redisKey);
+            
+            if (!updateDataStr) {
+                throw new ValidationError(errorMessages.INVALID.VERIFICATION_TOKEN_EXPIRED);
             }
 
-            const isVerified = verifyHashedCode(code, user.verificationToken);
+            const updateData = JSON.parse(updateDataStr);
+            const isVerified = verifyHashedCode(code, updateData.code);
 
             if (!isVerified) {
                 throw new ValidationError(errorMessages.TOKEN.TOKEN_INVALID);
             }
 
             user.isActive = 'active';
-            user.verificationToken = null;
-            user.verificationTokenExpiresAt = null;
             await user.save();
+            await redisClient.del(redisKey);
 
             const message = {
                 message: successMessages.AUTH_SUCCESS.EMAIL_VERIFIED,
@@ -117,21 +121,16 @@ class AuthService {
 
     async register(userData) {
         try {
-            console.log('Register service called with data:', {
-                name: userData.name,
-                surname: userData.surname,
-                email: userData.email,
-                phone: userData.phone,
-                password2: userData.password,
-                password: userData.password ? 'provided' : 'missing'
-            });
-            
             await validateRegister(userData);
 
-            const existingUser = await User.findOne({ email: userData.email });
+            const existingEmail = await User.findOne({ email: userData.email });
             const existingPhone = await User.findOne({ phone: userData.phone });
-            if (existingUser || existingPhone) {
-                throw new ConflictError(errorMessages.CONFLICT.USER_ALREADY_EXISTS);
+            if (existingEmail) {
+                throw new ConflictError(errorMessages.CONFLICT.EMAIL_ALREADY_EXISTS);
+            }
+    
+            if (existingPhone) {
+                throw new ConflictError(errorMessages.CONFLICT.PHONE_ALREADY_EXISTS);
             }
             
             const user = await this.createUser({ 
@@ -144,7 +143,6 @@ class AuthService {
 
             console.log('User created successfully:', user._id);
             
-            await createLog(user._id, 'User', 'REGISTER');
             
             return {
                 message: successMessages.AUTH_SUCCESS.USER_CREATED,
@@ -157,13 +155,6 @@ class AuthService {
 
     async createUser(userData) {
         try {
-            console.log('Creating user with data:', {
-                name: userData.name,
-                surname: userData.surname,
-                email: userData.email,
-                phone: userData.phone,
-                password: userData.password ? 'provided' : 'missing'
-            });
             
             const { name, surname, email, phone, password } = userData;
             const hashedPassword = await hashPassword(password);
@@ -192,7 +183,7 @@ class AuthService {
         try {
             const user = await User.findOne({ phone });
             if (user) {
-                throw new ConflictError(errorMessages.CONFLICT.USER_ALREADY_EXISTS);
+                throw new ConflictError(errorMessages.CONFLICT.PHONE_ALREADY_EXISTS);
             }
             return {
                 message: successMessages.AUTH_SUCCESS.PHONE_CHECKED,
@@ -207,7 +198,7 @@ class AuthService {
         try {
             const user = await User.findOne({ email });
             if (user) {
-                throw new ConflictError(errorMessages.CONFLICT.USER_ALREADY_EXISTS);
+                throw new ConflictError(errorMessages.CONFLICT.EMAIL_ALREADY_EXISTS);
             }
             return {
                 message: successMessages.AUTH_SUCCESS.EMAIL_CHECKED,
@@ -235,17 +226,21 @@ class AuthService {
             text: `Your login code is: ${verifyCode}`,
             });
 
+            const redisClient = getRedisClient();
+            const redisKey = `user:${user._id}:login:email`;
+            const updateData = {
+                value: verifyCode,
+                code: hashedCode,
+                userId: user._id
+            };
             
+            await redisClient.setEx(redisKey, 300, JSON.stringify(updateData));
 
-            user.loginToken = hashedCode;
-            user.loginTokenExpiresAt = (NOW().getTime()) + (1000 * 60 * 5); // 5 dk
-            const val = user.loginTokenExpiresAt;
-            await user.save();
 
             
             const message = {
                 message: successMessages.AUTH_SUCCESS.LOGIN_CODE_SENT,
-                expiresAt: FORMAT_EXPIRES_AT(val)
+                expiresAt: FORMAT_EXPIRES_AT(NOW().getTime() + (1000 * 60 * 5)) // 5 dakika
             }
 
             return message;
@@ -260,23 +255,24 @@ class AuthService {
             const user = await User.findOne({ email });
             validateUser(user);
 
-            if (user.loginTokenExpiresAt < NOW()) {
-                user.loginToken = null;
-                user.loginTokenExpiresAt = null;
-                await user.save();
-                throw new ForbiddenError(errorMessages.TOKEN.TOKEN_EXPIRED);
+            const redisClient = getRedisClient();
+            const redisKey = `user:${user._id}:login:email`;
+            const updateDataStr = await redisClient.get(redisKey);
+            
+            if (!updateDataStr) {
+                throw new ValidationError(errorMessages.INVALID.VERIFICATION_TOKEN_EXPIRED);
             }
 
-            const isVerified = verifyHashedCode(code, user.loginToken);
+            const updateData = JSON.parse(updateDataStr);
+            const isVerified = verifyHashedCode(code, updateData.code);
             if (!isVerified) {
                 throw new ValidationError(errorMessages.INVALID.INVALID_LOGIN_CODE);
             }
             
             user.isLoggedIn = true;
             user.lastLoginAt = NOW();
-            user.loginToken = null;
-            user.loginTokenExpiresAt = null;
             await user.save();
+            await redisClient.del(redisKey);
 
             return {
                 message: successMessages.AUTH_SUCCESS.LOGIN_SUCCESS,
@@ -304,8 +300,6 @@ class AuthService {
             
             user.isLoggedIn = true;
             user.lastLoginAt = NOW();
-            user.loginToken = null;
-            user.loginTokenExpiresAt = null;
             await user.save();
 
             return {
@@ -335,8 +329,6 @@ class AuthService {
             
             user.isLoggedIn = true;
             user.lastLoginAt = NOW();
-            user.loginToken = null;
-            user.loginTokenExpiresAt = null;
             await user.save();
 
             return {
@@ -356,8 +348,6 @@ class AuthService {
             validateUser(user);
 
             user.isLoggedIn = false;
-            user.loginToken = null;
-            user.loginTokenExpiresAt = null;
             await user.save();
 
             return {
@@ -627,9 +617,7 @@ class AuthService {
         }
     }
 
-
-
+    
 }
-
 
 module.exports = new AuthService();

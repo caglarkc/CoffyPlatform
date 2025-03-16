@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -23,24 +23,19 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    isLoggedIn: {
-        type: Boolean,
-        default: false
+    role: {
+        type: Number,
+        required: true
     },
-    lastLoginAt: {
-        type: Date,
-        default: null
-    },
-    lastLogoutAt: {
-        type: Date,
-        default: null
-    },
-    isActive: {
-        type: String,
-        enum: ['active', 'notVerified', 'blocked' , 'deleted'],
-        default: 'notVerified'
-    },
+    location: {
+        region: { type: String, default: null },
+        city: { type: String, default: null },
+        district: { type: String, default: null },
+        storeId: { type: String, default: null },
+    }
 }, { timestamps: true });
 
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('Admin', adminSchema);
+
+

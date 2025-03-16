@@ -2,9 +2,12 @@
 require('dotenv').config();
 
 const express = require('express');
+const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
+const adminRoutes = require('./routes/admin.routes');
 const { requestContextMiddleware } = require('./middlewares/requestContext');
 const errorHandler = require('./middlewares/errorHandler/errorHandler');
+const keyRotationService = require('./services/security/keyRotation.service');
 
 const { 
   connectMongoDB, 
@@ -16,6 +19,12 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3001; // Auth service port
 
+// CORS middleware - Frontend'in 3000 portundan isteklere izin ver
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -23,6 +32,7 @@ app.use(requestContextMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error middleware - tüm route'lardan sonra eklenmelidir
 app.use(errorHandler);
@@ -43,8 +53,28 @@ async function initializeDatabases() {
   }
 }
 
-// Import routes (to be implemented)
-// const authRoutes = require('./routes/auth');
+// Initialize key rotation
+function initializeKeyRotation() {
+  try {
+    // Schedule key rotation every 12 hours
+    const keyRotationJob = keyRotationService.scheduleKeyRotation('0 */12 * * *');
+    
+    console.log('[Auth Service] Key rotation service initialized successfully');
+    
+    // Generate initial key if it doesn't exist
+    if (!process.env.SECRET_KEY) {
+      console.log('[Auth Service] No SECRET_KEY found, generating initial key...');
+      keyRotationService.updateSecretKey()
+        .then(() => console.log('[Auth Service] Initial SECRET_KEY generated successfully'))
+        .catch(err => console.error('[Auth Service] Failed to generate initial SECRET_KEY:', err));
+    }
+    
+    return keyRotationJob;
+  } catch (error) {
+    console.error('[Auth Service] Failed to initialize key rotation service:', error);
+    return null;
+  }
+}
 
 // Start the server
 async function startServer() {
@@ -52,8 +82,8 @@ async function startServer() {
     // Initialize database connections first
     await initializeDatabases();
     
-    // Apply routes
-    // app.use('/api/auth', authRoutes);
+    // Initialize key rotation service
+    const keyRotationJob = initializeKeyRotation();
     
     // Basic route for testing
     app.get('/', (req, res) => {
@@ -72,12 +102,20 @@ async function startServer() {
     // Handle application shutdown
     process.on('SIGINT', async () => {
       console.log('[Auth Service] Application shutting down...');
+      if (keyRotationJob) {
+        keyRotationJob.stop();
+        console.log('[Auth Service] Key rotation service stopped');
+      }
       await closeConnections();
       process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
       console.log('[Auth Service] Application shutting down...');
+      if (keyRotationJob) {
+        keyRotationJob.stop();
+        console.log('[Auth Service] Key rotation service stopped');
+      }
       await closeConnections();
       process.exit(0);
     });

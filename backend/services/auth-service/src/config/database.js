@@ -1,6 +1,6 @@
 /**
  * Auth Service Database Configuration
- * Contains connection settings for Redis and MongoDB
+ * Contains connection settings for MongoDB
  */
 
 module.exports = {
@@ -12,14 +12,5 @@ module.exports = {
       serverSelectionTimeoutMS: 5000, // 5 saniye sonra timeout
       socketTimeoutMS: 45000, // 45 saniye sonra socket timeout
     }
-  },
-  
-  // Redis connection settings
-  redis: {
-    host: 'redis-16818.c8.us-east-1-4.ec2.redns.redis-cloud.com',
-    port: 16818,
-    password: 'MhiuqV5oCNbUNmxhmFrbrMVfRv5w6RtL',
-    username: 'default',
-    db: 0
   }
 }; 

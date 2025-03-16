@@ -36,10 +36,18 @@ const validatePassword = (password) => {
     }
 };
 
+const validateRole = (role) => {
+    console.log("role:", role);
+    if (!role ||  role !== "RegionAdmin" || role !== "CityAdmin" || role !== "DistrictAdmin" || role !== "StoreAdmin" || role !== "StoreWorker") {
+        throw new ValidationError(errorMessages.INVALID.INVALID_ROLE);
+    }
+}
+
 module.exports = {
     validateName,
     validateSurname,
     validateEmail,
     validatePhone,
-    validatePassword
+    validatePassword,
+    validateRole
 };
