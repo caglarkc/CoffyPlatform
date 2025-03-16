@@ -5,15 +5,12 @@
 
 const { MongoClient } = require('mongodb');
 const mongoose = require('mongoose');
-const redis = require('redis');
 const config = require('../config/database');
+const redis = require('../config/redis');
 
 // MongoDB connection
 let mongoClient = null;
 let mongoDb = null;
-
-// Redis connection
-let redisClient = null;
 
 /**
  * Initialize MongoDB connection
@@ -43,22 +40,8 @@ async function connectMongoDB() {
  */
 async function connectRedis() {
   try {
-    if (!redisClient) {
-      redisClient = redis.createClient({
-        url: `redis://${config.redis.username}:${config.redis.password}@${config.redis.host}:${config.redis.port}`,
-        database: config.redis.db
-      });
-
-      // Redis error handling
-      redisClient.on('error', (err) => {
-        console.error('[Auth Service] Redis error:', err);
-      });
-
-      // Connect to Redis
-      await redisClient.connect();
-      console.log('[Auth Service] Redis connection established successfully');
-    }
-    return redisClient;
+    await redis.connect();
+    return redis.redisClient();
   } catch (error) {
     console.error('[Auth Service] Redis connection error:', error);
     throw error;
@@ -83,11 +66,7 @@ async function closeConnections() {
       console.log('[Auth Service] Mongoose connection closed');
     }
     
-    if (redisClient) {
-      await redisClient.quit();
-      redisClient = null;
-      console.log('[Auth Service] Redis connection closed');
-    }
+    await redis.disconnect();
   } catch (error) {
     console.error('[Auth Service] Error closing database connections:', error);
     throw error;
@@ -102,20 +81,13 @@ const getCollection = (collectionName) => {
   return mongoDb.collection(collectionName);
 };
 
-// Redis Key Helpers
-const getUserSessionKey = (userId) => `auth:session:${userId}`;
-const getRefreshTokenKey = (tokenId) => `auth:refresh:${tokenId}`;
-
 module.exports = {
   connectMongoDB,
   connectRedis,
   closeConnections,
   getMongoDb: () => mongoDb,
-  getRedisClient: () => redisClient,
+  getRedisClient: () => redis.redisClient(),
   getCollection,
   // Redis key helpers
-  keys: {
-    getUserSessionKey,
-    getRefreshTokenKey
-  }
+  keys: redis.keys
 }; 

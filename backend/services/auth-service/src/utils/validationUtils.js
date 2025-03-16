@@ -59,9 +59,28 @@ const validateUser = (user) => {
     
 }
 
+const validateAdmin = (admin) => {
+    if (!admin) {
+        throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
+    }
+}
+
+
+const validateAdminRegister = (data) => {
+    textUtils.validateName(data.name);
+    textUtils.validateSurname(data.surname);
+    textUtils.validateEmail(data.email);
+    textUtils.validatePhone(data.phone);
+    textUtils.validatePassword(data.password);
+    textUtils.validateRole(data.role);
+    //TODO: validate city, region, district, storeId
+}
+
+
 module.exports = {
     validateRegister,
     validateSendEmailVerifyToken,
     validateUser,
-    validateLoginToken
+    validateLoginToken,
+    validateAdminRegister
 };

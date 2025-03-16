@@ -17,6 +17,7 @@ module.exports = {
         PHONE_UPDATED: 'Telefon numarası güncellendi',
         USER_FOUND: 'Kullanıcı bulundu',
         UPDATE_REQUEST_CANCELLED: 'Güncelleme isteği iptal edildi',
+        TOKEN_REFRESHED: 'Token yenilendi',
     }
 };
 
