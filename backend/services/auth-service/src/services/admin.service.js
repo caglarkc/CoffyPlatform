@@ -13,6 +13,7 @@ const tokenUtils = require('../utils/tokenUtils');
 const { validateName , validateSurname ,validatePassword, validateRegister} = require('../utils/textUtils');
 const jwt = require('jsonwebtoken');
 const { getRedisClient } = require('../utils/database');
+const { getRequestContext } = require('../middlewares/requestContext');
 
 
 const ROLE_CODES = {
@@ -69,6 +70,8 @@ class AdminService {
             const existingEmail = await Admin.findOne({email: email});
             const existingPhone = await Admin.findOne({phone: phone});
     
+            console.log("creatorEmail:", creatorEmail);
+            console.log("creatorPassword:", creatorPassword);
             if (existingEmail) {
                 console.log("Email ile kayıtlı admin bulundu");
                 throw new ConflictError(errorMessages.CONFLICT.EMAIL_ALREADY_EXISTS);
@@ -149,31 +152,56 @@ class AdminService {
                 admin = await this.checkAdmin(email, password);
             }
 
-
             if (!admin) {
                 throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
             }
 
+            // Redis'te token kontrolü
             const existRefreshToken = await redisService.get(`auth:refresh:${admin._id}`);
- 
+
             if (existRefreshToken) {
                 const existAccessToken = await redisService.get(`auth:access:${admin._id}`);
                 if (existAccessToken) {
+                    // Kullanıcı zaten giriş yapmış
                     return {
-                        message: "Bu kullanıcı giriş yapmış"
+                        message: "Bu kullanıcı giriş yapmış, lütfen önce çıkış yapınız",
+                        alreadyLoggedIn: true,
+                        adminId: admin._id.toString(),
+                        adminName: admin.name,
+                        adminRole: admin.role
                     };
-                }else {
-                    const result = await this.refreshAccessToken(admin._id);
-                    return result;
+                } else {
+                    // Access token süresi dolmuş ama refresh token geçerli
+                    // Otomatik olarak yeni access token oluştur
+                    // Yeni access token oluştur
+                    const tokenPair = tokenService.createTokenPair(admin._id);
+                    const accessToken = tokenPair.accessToken;
+
+                    // Redis'e yeni access token'ı kaydet
+                    await redisService.put(`auth:access:${admin._id}`, accessToken, 900); // 15 minutes
+
+                    return {
+                        message: "Oturumunuz yenilendi, yeni token oluşturuldu",
+                        accessTokenRefreshed: true,
+                        admin: _formatAdminResponse(admin),
+                        accessToken: accessToken,
+                        refreshToken: existRefreshToken
+                    };
                 }
             }
 
-
-
+            // Yeni token çifti oluştur
             const tokenPair = tokenService.createTokenPair(admin._id);
 
+            // Redis'e kaydet
             await redisService.put(`auth:access:${admin._id}`, tokenPair.accessToken, 900); // 15 minutes
             await redisService.put(`auth:refresh:${admin._id}`, tokenPair.refreshToken, 3600 * 7); // 7 hours
+
+            // RequestContext güncelle
+            const requestContext = getRequestContext();
+            requestContext.setUserId(admin._id);
+            requestContext.setData('adminRole', admin.role);
+            requestContext.setData('adminName', admin.name);
 
             return {
                 message: successMessages.AUTH_SUCCESS.LOGIN_SUCCESS,
@@ -188,132 +216,111 @@ class AdminService {
     }
 
     // Refresh token ile yeni access token oluşturma metodu
-    async refreshAccessToken(uid) {
+    async refreshAccessToken(adminId, refreshToken) {
         try {
-            const tokenPair = tokenService.createTokenPair(uid);
-            const access = tokenPair.accessToken;
+            // Redis'ten refresh token kontrolü
+            const storedRefreshToken = await redisService.get(`auth:refresh:${adminId}`);
+            
+            if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+                throw new ForbiddenError(errorMessages.INVALID.INVALID_REFRESH_TOKEN);
+            }
 
-            await redisService.put(`auth:access:${uid}`, access, 900); // 15 minutes
+            // Yeni access token oluştur
+            const tokenPair = tokenService.createTokenPair(adminId);
+            const accessToken = tokenPair.accessToken;
+
+            // Redis'e yeni access token'ı kaydet
+            await redisService.put(`auth:access:${adminId}`, accessToken, 900); // 15 minutes
 
             return {
                 message: successMessages.AUTH_SUCCESS.TOKEN_REFRESHED,
-                expiresAt: "15 minutes after, " + new Date(Date.now() + 900 * 1000).toISOString()
+                accessToken: accessToken,
+                expiresAt: new Date(Date.now() + 900 * 1000).toISOString()
             };
         } catch (error) {
             throw error;
         }
     }
 
-    async upgradeRole(creatorEmail, creatorPassword, email, newRole) {
+    async getRefreshToken(adminId) {
         try {
-            const admin = await Admin.findOne({email: email});
+            return await redisService.get(`auth:refresh:${adminId}`);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async upgradeRole(data, loggedAdmin) {
+        try {
+            const {email, newRole } = data;
+            const creatorEmail = loggedAdmin.email;
+            if (!creatorEmail) {
+                throw new NotFoundError("HATA1, önce giriş yap");
+            }
+            let admin = await this.checkCreator(creatorEmail, creatorPassword);
             if (!admin) {
-                throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
+                admin = await this.checkAdmin(creatorEmail, creatorPassword);
             }
 
-            if (admin.role.code >= ROLE_CODES[newRole]) {
-                throw new ForbiddenError(errorMessages.CONFLICT.ROLE_IS_SAME_OR_BETTER);
-            }
-            
-            let isAllAccess = false;
 
-            const creator = await Admin.findOne({"role.type": "Creator"});
-
-            if (!creator) {
-                throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
+            if (!admin) {
+                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
             }
 
-            const isCreatorEmail = verifyCreaterData(creatorEmail, creator.email);
-
-            if (isCreatorEmail) {
-                const isCreatorPassword = verifyCreaterData(creatorPassword, creator.password);
-                if (isCreatorPassword) {
-                    isAllAccess = true;
-                }
+            if (admin.role <= newRole) {
+                throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
             }
 
-            if (!isAllAccess) {
-                const enteredAdmin = await Admin.findOne({email: creatorEmail});
-                if (!enteredAdmin) {
-                    throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
-                }
-                const isEnteredAdminPassword = verifyAdminData(creatorPassword, enteredAdmin.password);
-                if (!isEnteredAdminPassword) {
-                    throw new ForbiddenError(errorMessages.INVALID.INVALID_CREDENTIALS);
-                }
-                const level = enteredAdmin.role.code;
-                if (level <= admin.role.code) {
-                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
-                }
+            const newAdmin = await Admin.findOne({email: email});
+            if (!newAdmin) {
+                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
             }
 
-            admin.role.type = newRole;
-            admin.role.code = ROLE_CODES[newRole];
-            await admin.save();
+            newAdmin.role = newRole;
+            await newAdmin.save();
 
             const message = "Rol başarıyla güncellendi";
             return {message: message, 
-                    admin: _formatAdminResponse(admin)};
-
-
+                    admin: _formatAdminResponse(newAdmin)};
+            
+            
             
         } catch (error) {
             throw error;
         }
     }
 
-    async downgradeRole(creatorEmail, creatorPassword, email, newRole) {
+    async downgradeRole(data) {
         try {
-            const admin = await Admin.findOne({email: email});
+            const { creatorEmail, creatorPassword, email, newRole } = data;
+    
+            let admin = await this.checkCreator(creatorEmail, creatorPassword);
             if (!admin) {
-                throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
+                admin = await this.checkAdmin(creatorEmail, creatorPassword);
             }
 
-            if (admin.role.code <= ROLE_CODES[newRole]) {
-                throw new ForbiddenError(errorMessages.CONFLICT.ROLE_IS_SAME_OR_LOWER);
-            }
-            
-            let isAllAccess = false;
 
-            const creator = await Admin.findOne({"role.type": "Creator"});
-
-            if (!creator) {
-                throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
+            if (!admin) {
+                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
             }
 
-            const isCreatorEmail = verifyCreaterData(creatorEmail, creator.email);
-
-            if (isCreatorEmail) {
-                const isCreatorPassword = verifyCreaterData(creatorPassword, creator.password);
-                if (isCreatorPassword) {
-                    isAllAccess = true;
-                }
+            if (admin.role <= newRole) {
+                throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
             }
 
-            if (!isAllAccess) {
-                const enteredAdmin = await Admin.findOne({email: creatorEmail});
-                if (!enteredAdmin) {
-                    throw new NotFoundError(errorMessages.NOT_FOUND.USER_NOT_FOUND);
-                }
-                const isEnteredAdminPassword = verifyAdminData(creatorPassword, enteredAdmin.password);
-                if (!isEnteredAdminPassword) {
-                    throw new ForbiddenError(errorMessages.INVALID.INVALID_CREDENTIALS);
-                }
-                const level = enteredAdmin.role.code;
-                if (level <= admin.role.code) {
-                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
-                }
+            const newAdmin = await Admin.findOne({email: email});
+            if (!newAdmin) {
+                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
             }
 
-            admin.role.type = newRole;
-            admin.role.code = ROLE_CODES[newRole];
-            await admin.save();
+            newAdmin.role = newRole;
+            await newAdmin.save();
 
             const message = "Rol başarıyla güncellendi";
             return {message: message, 
-                    admin: _formatAdminResponse(admin)};
-
-
+                    admin: _formatAdminResponse(newAdmin)};
+            
+            
             
         } catch (error) {
             throw error;
