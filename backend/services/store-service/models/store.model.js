@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
+const { getStoreConnection } = require('../utils/mongooseConnections');
 
-const adminSchema = new mongoose.Schema({
+// Store veritabanı için mongoose bağlantısını al
+const storeConn = getStoreConnection();
+
+const storeSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -25,6 +29,7 @@ const adminSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Admin', adminSchema);
+// Store veritabanı bağlantısını kullan
+module.exports = storeConn.model('Store', storeSchema);
 
 

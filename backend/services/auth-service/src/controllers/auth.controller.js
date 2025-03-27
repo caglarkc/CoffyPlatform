@@ -1,4 +1,5 @@
 const AuthService = require('../services/auth.service');
+const { logger } = require('../utils/logger');
 
 class AuthController {
 
@@ -20,14 +21,27 @@ class AuthController {
 
     async register(req, res, next) {
         try {
-            console.log('Register request received:', req.body);
+            logger.info('Register request received', { 
+                user: { 
+                    email: req.body.email,
+                    phone: req.body.phone,
+                    name: req.body.name 
+                },
+                requestId: req.requestId
+            });
+            
             const { name, surname, email, phone, password } = req.body;
             
             const message = await this.authService.register({ name, surname, email, phone, password });
-            console.log('User registered successfully:', message);
+            
+            logger.info('User registered successfully', { 
+                userId: message.userId || 'unknown',
+                email: email,
+                requestId: req.requestId 
+            });
+            
             return res.status(201).json(message);
         } catch (error) {
-            // Hata mesajını controller katmanında loglamıyoruz
             // Hatayı error middleware'e iletiyoruz
             next(error);
         }
@@ -116,13 +130,6 @@ class AuthController {
         const message = await this.authService.cancelUpdateRequest(userId, type);
         return res.status(200).json(message);
     }
-
-
-
-    
-    
-    
-    
 
     async getTime(req, res, next) {
         const now = () => new Date();

@@ -4,12 +4,11 @@ const { getRequestContext } = require('../middlewares/requestContext');
 const logSchema = new mongoose.Schema({
     objectId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
         required: true
     },
     objectType: {
         type: String,
-        enum: ['User', 'IpRateLimit', 'AuthRateLimit', 'ProfileRateLimit'],
+        enum: ['User', 'Admin'],
         required: true
     },
     actionType: {

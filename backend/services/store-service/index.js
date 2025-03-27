@@ -3,14 +3,21 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const {requestContextMiddleware} = require('./middlewares/requestContext');
-const {errorHandler} = require('./middlewares/errorHandler/errorHandler');
+const errorHandler = require('./middlewares/errorHandler/errorHandler');
 const {logger, httpLogger} = require('./utils/logger');
+const keyRotationService = require('./services/security/keyRotation.service');
+const { initializeMongooseConnections } = require('./utils/mongooseConnections');
+
+// Import routes
+const storeRoutes = require('./routes/store.routes');
 
 const { 
   connectMongoDB, 
   closeConnections,
-  connectRedis
+  connectRedis,
+  getAuthDb
 } = require('./utils/database');
 
 // Create Express application
@@ -32,7 +39,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestContextMiddleware);
 
-
+// Register routes
+app.use('/api/store', storeRoutes);
 
 // Error middleware - tüm route'lardan sonra eklenmelidir
 app.use(errorHandler);
@@ -49,12 +57,17 @@ app.get('/', (req, res) => {
 // Initialize database connections
 async function initializeDatabases() {
   try {
-    // Connect to MongoDB
+    // Connect to MongoDB - store veritabanı (varsayılan)
     await connectMongoDB();
 
     // Connect to Redis
     await connectRedis();
     
+    // Auth veritabanına bağlan (admin, user ve log verileri)
+    await getAuthDb();
+    
+    // Mongoose bağlantılarını başlat
+    await initializeMongooseConnections();
     
     logger.info('All database connections established successfully');
   } catch (error) {

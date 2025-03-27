@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema({
         enum: ['active', 'notVerified', 'blocked' , 'deleted'],
         default: 'notVerified'
     },
+    adminMessage: {
+        type: String,
+        default: null
+    }
 }, { timestamps: true });
 
 

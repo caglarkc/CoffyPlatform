@@ -38,10 +38,16 @@ const shouldRefreshToken = (token) => {
     return timeUntilExpiration > 0 && timeUntilExpiration < REFRESH_THRESHOLD;
 };
 
+// Token içeriğini decode et - yeni fonksiyon
+const decodeToken = (token) => {
+    return jwt.decode(token);
+};
+
 module.exports = {
     createAccessToken,
     createRefreshToken,
     verifyToken,
     checkTokenExpiration,
-    shouldRefreshToken
+    shouldRefreshToken,
+    decodeToken
 };

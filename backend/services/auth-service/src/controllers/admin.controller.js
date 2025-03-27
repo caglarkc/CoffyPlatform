@@ -4,7 +4,9 @@ class AdminController {
     
     async registerAdmin(req, res) {
         try {
-            const admin = await AdminService.registerAdmin(req.body);
+            const loggedAdmin = req.admin;
+
+            const admin = await AdminService.registerAdmin(req.body, loggedAdmin);
             return res.status(201).json(admin);
         } catch (error) {
             return res.status(500).json({ message: error.message });
@@ -23,7 +25,9 @@ class AdminController {
 
     async downgradeRole(req, res) {
         try {
-            const admin = await AdminService.downgradeRole(req.body);
+            const loggedAdmin = req.admin;
+            
+            const admin = await AdminService.downgradeRole(req.body, loggedAdmin);
             return res.status(200).json(admin);
         } catch (error) {
             return res.status(500).json({ message: error.message });
@@ -32,8 +36,9 @@ class AdminController {
 
     async deleteAdmin(req, res) {
         try {
-            const admin = await AdminService.deleteAdmin(req.body);
-            return res.status(200).json(admin);
+            const loggedAdmin = req.admin;
+            const result = await AdminService.deleteAdmin(req.body, loggedAdmin);
+            return res.status(200).json(result);
         } catch (error) {
             return res.status(500).json({ message: error.message });
         }
@@ -59,8 +64,9 @@ class AdminController {
 
     async updateAdmin(req, res) {
         try {
-            const admin = await AdminService.updateAdmin(req.body);
-            return res.status(200).json(admin);
+            const loggedAdmin = req.admin;
+            const result = await AdminService.updateAdmin(req.body, loggedAdmin);
+            return res.status(200).json(result);
         } catch (error) {
             return res.status(500).json({ message: error.message });
         }
@@ -68,8 +74,9 @@ class AdminController {
 
     async changeLocation(req, res) {
         try {
-            const admin = await AdminService.changeLocation(req.body);
-            return res.status(200).json(admin);
+            const loggedAdmin = req.admin;
+            const result = await AdminService.changeLocation(req.body, loggedAdmin);
+            return res.status(200).json(result);
         } catch (error) {
             return res.status(500).json({ message: error.message });
         }
@@ -192,6 +199,66 @@ class AdminController {
                 delete result.accessToken;
             }
             
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async getUsers(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.getUsers(loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async getUsersWithUniqueData(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.getUsersWithUniqueData(req.body, loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async filterUsers(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.filterUsers(req.body, loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async blockUser(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.blockUser(req.body, loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async deleteUser(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.deleteUser(req.body, loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async getAdminProfile(req,res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminService.getAdminProfile(loggedAdmin);
             return res.status(200).json(result);
         } catch (error) {
             return res.status(500).json({ message: error.message });

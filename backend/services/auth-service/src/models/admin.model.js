@@ -32,6 +32,20 @@ const adminSchema = new mongoose.Schema({
         city: { type: String, default: null },
         district: { type: String, default: null },
         storeId: { type: String, default: null },
+    },
+    whoCreate: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
+        default: null
+    },
+    status: {
+        type: String,
+        enum: ['active', 'blocked', 'deleted'],
+        default: 'active'
+    },
+    isLoggedIn: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 
