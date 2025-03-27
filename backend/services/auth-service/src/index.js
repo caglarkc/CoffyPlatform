@@ -9,7 +9,7 @@ const adminRoutes = require('./routes/admin.routes');
 const { requestContextMiddleware } = require('./middlewares/requestContext');
 const errorHandler = require('./middlewares/errorHandler/errorHandler');
 const keyRotationService = require('./services/security/keyRotation.service');
-const { authAdminMiddleware } = require('./middlewares/authMiddleware');
+const { logger, httpLogger } = require('./utils/logger');
 
 const { 
   connectMongoDB, 
@@ -23,9 +23,12 @@ const PORT = process.env.PORT || 3001; // Auth service port
 
 // CORS middleware - Frontend'in 3000 portundan isteklere izin ver
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true
 }));
+
+// HTTP request logger middleware
+app.use(httpLogger);
 
 // Middleware
 app.use(express.json());
@@ -40,6 +43,15 @@ app.use('/api/admin', adminRoutes);
 // Error middleware - tüm route'lardan sonra eklenmelidir
 app.use(errorHandler);
 
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ 
+    service: 'Auth Service',
+    status: 'running',
+    message: 'Auth Service is running with MongoDB and Redis connections' 
+  });
+});
+
 // Initialize database connections
 async function initializeDatabases() {
   try {
@@ -49,9 +61,9 @@ async function initializeDatabases() {
     // Connect to Redis
     await connectRedis();
     
-    console.log('[Auth Service] All database connections established successfully');
+    logger.info('All database connections established successfully');
   } catch (error) {
-    console.error('[Auth Service] Failed to initialize databases:', error);
+    logger.error('Failed to initialize databases', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }
@@ -62,19 +74,19 @@ function initializeKeyRotation() {
     // Schedule key rotation every 12 hours
     const keyRotationJob = keyRotationService.scheduleKeyRotation('0 */12 * * *');
     
-    console.log('[Auth Service] Key rotation service initialized successfully');
+    logger.info('Key rotation service initialized successfully');
     
     // Generate initial key if it doesn't exist
     if (!process.env.SECRET_KEY) {
-      console.log('[Auth Service] No SECRET_KEY found, generating initial key...');
+      logger.warn('No SECRET_KEY found, generating initial key...');
       keyRotationService.updateSecretKey()
-        .then(() => console.log('[Auth Service] Initial SECRET_KEY generated successfully'))
-        .catch(err => console.error('[Auth Service] Failed to generate initial SECRET_KEY:', err));
+        .then(() => logger.info('Initial SECRET_KEY generated successfully'))
+        .catch(err => logger.error('Failed to generate initial SECRET_KEY', { error: err.message }));
     }
     
     return keyRotationJob;
   } catch (error) {
-    console.error('[Auth Service] Failed to initialize key rotation service:', error);
+    logger.error('Failed to initialize key rotation service', { error: error.message, stack: error.stack });
     return null;
   }
 }
@@ -88,47 +100,53 @@ async function startServer() {
     // Initialize key rotation service
     const keyRotationJob = initializeKeyRotation();
     
-    // Basic route for testing
-    app.get('/', (req, res) => {
-      res.json({ 
-        service: 'Auth Service',
-        status: 'running',
-        message: 'Auth Service is running with MongoDB and Redis connections' 
-      });
-    });
-    
     // Start listening
     app.listen(PORT, () => {
-      console.log(`[Auth Service] Server running on port ${PORT}`);
+      logger.info(`Server running on port ${PORT}`);
     });
     
     // Handle application shutdown
     process.on('SIGINT', async () => {
-      console.log('[Auth Service] Application shutting down...');
+      logger.info('Application shutting down...');
       if (keyRotationJob) {
         keyRotationJob.stop();
-        console.log('[Auth Service] Key rotation service stopped');
+        logger.info('Key rotation service stopped');
       }
       await closeConnections();
       process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
-      console.log('[Auth Service] Application shutting down...');
+      logger.info('Application shutting down...');
       if (keyRotationJob) {
         keyRotationJob.stop();
-        console.log('[Auth Service] Key rotation service stopped');
+        logger.info('Key rotation service stopped');
       }
       await closeConnections();
       process.exit(0);
     });
     
+    // Beklenmeyen hatalar için global error handler
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+      process.exit(1);
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled rejection', { reason: reason.message, stack: reason.stack });
+    });
+    
   } catch (error) {
-    console.error('[Auth Service] Failed to start server:', error);
+    logger.error('Failed to start server', { error: error.message, stack: error.stack });
     await closeConnections();
     process.exit(1);
   }
 }
 
-// Start the application
-startServer();
+// Start the application only if not being required (imported) by another module (like tests)
+if (require.main === module) {
+  startServer();
+}
+
+// Export the app for testing
+module.exports = app;

@@ -1,32 +1,47 @@
-// middleware/errorHandler/errorHandler.js
-const errorHandler = (err, req, res, next) => {
-    // HTTP durum kodları
-    const statusCodes = {
-        ValidationError: 400,
-        AuthError: 401,
-        NotFoundError: 404,
-        DatabaseError: 500
-    };
+const { logger } = require('../../utils/logger');
 
-    // Sadece hata mesajını konsola yazdır, stack trace olmadan
-    console.error(`Hata: ${err.message}`);
+/**
+ * Central error handling middleware
+ */
+function errorHandler(err, req, res, next) {
+  // HTTP durum kodunu belirle
+  const statusCode = err.statusCode || 500;
+  
+  // Error bilgilerini hazırla
+  const errorResponse = {
+    success: false,
+    status: statusCode,
+    message: err.message || 'Internal Server Error',
+    details: err.details || null,
+    type: err.type || null,
+    timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  };
+  
+  // Hatayı logla
+  if (statusCode >= 500) {
+    logger.error(`${statusCode} Error:`, {
+      error: err.message,
+      details: err.details,
+      type: err.type,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      requestId: req.requestId
+    });
+  } else if (statusCode >= 400) {
+    logger.warn(`${statusCode} Error:`, {
+      error: err.message,
+      details: err.details,
+      type: err.type,
+      path: req.path,
+      method: req.method,
+      requestId: req.requestId
+    });
+  }
+  
+  // Hatayı client'a gönder
+  res.status(statusCode).json(errorResponse);
+}
 
-    const response = {
-        success: false,
-        status: statusCodes[err.name] || err.statusCode || 500,
-        message: err.message,
-        details: err.details || null,
-        type: err.type || null,
-        timestamp: new Date().toISOString()
-    };
-
-    // Development ortamında bile stack trace'i konsola yazdırmıyoruz
-    // if (process.env.NODE_ENV === 'development') {
-    //     console.debug('Stack trace:', err.stack);
-    //     response.stack = err.stack;
-    // }
-
-    res.status(response.status).json(response);
-};
-
-module.exports = errorHandler; 
+module.exports = errorHandler;

@@ -4,13 +4,13 @@ const {
     verifyToken,
     shouldRefreshToken
 } = require('../utils/tokenUtils');
+const RedisService = require('./redis.service');
 const UnauthorizedError = require('../utils/errors/UnauthorizedError');
 const errorMessages = require('../config/errorMessages');
+
 class TokenService {
     async verifyAndDecodeToken(token, isRefreshToken = false) {
         try {
-            
-
             // Token'ı doğrula
             const decoded = verifyToken(token, isRefreshToken);
 

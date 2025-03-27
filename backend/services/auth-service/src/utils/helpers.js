@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const dotenv = require('dotenv');
-
+const Buffer = require('buffer').Buffer;
 dotenv.config();
 
 // Hash'leme işlemi
@@ -94,6 +94,8 @@ const verifyCreatorPassword = (password) => {
     const hashedCreatorPassword = hashCreaterData(process.env.CREATER_PASSWORD);
     return hashedInputPassword === hashedCreatorPassword;
 };
+
+
 
 module.exports = {
     generateCode,

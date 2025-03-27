@@ -16,9 +16,9 @@ module.exports = {
         NO_PENDING_REQUEST: 'Bekleyen güncelleme isteği bulunamadı',
         REFRESH_TOKEN_REQUIRED: 'Refresh token gereklidir',
         INVALID_REFRESH_TOKEN: 'Geçersiz refresh token',
-        ADMIN_NOT_FOUND: 'Admin bulunamadı',
     },
     NOT_FOUND: {
+        ADMIN_NOT_FOUND: 'Admin bulunamadı',
         USER_NOT_FOUND: 'Kullanıcı bulunamadı',
     },
     FORBIDDEN: {
@@ -28,6 +28,9 @@ module.exports = {
         USER_DELETED: 'Kullanıcı silindi',
         USER_NOT_VERIFIED: 'Kullanıcı maili doğrulanmamış',
         INSUFFICIENT_PERMISSIONS: 'Yetersiz yetki',
+        BLOCKED_ADMIN: 'Admin engellendi',
+        DELETED_ADMIN: 'Admin silindi',
+        ALREADY_DELETED: 'Admin zaten silindi',
     },
     CONFLICT: {
         USER_ALREADY_EXISTS: 'Kullanıcı zaten mevcut',
@@ -41,9 +44,11 @@ module.exports = {
         TOKEN_EXPIRED: 'Token süresi doldu',
         TOKEN_NOT_FOUND: 'Token bulunamadı',
         TOKEN_INVALID: 'Token geçersiz',
-        TOKEN_CANT_SEND_TIME: "Yeni doğrulama kodu göndermek için en az 1 dakika geçmelidir.",
+        TOKEN_CANT_SEND_TIME: 'Yeni doğrulama kodu göndermek için en az 1 dakika geçmelidir.',
+    },
+    INTERNAL: {
+        INTERNAL_SERVER_ERROR: 'İç sunucu hatası',
+    },
 
-    }
-
-        
+    
 };

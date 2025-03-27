@@ -23,6 +23,9 @@ router.get('/verify-update-request', asyncHandler(authController.verifyUpdateReq
 router.get('/get-user', asyncHandler(authController.getUser.bind(authController)));
 router.get('/cancel-update-request', asyncHandler(authController.cancelUpdateRequest.bind(authController)));
 
+
+
+
 // Admin-only route for manual key rotation
 // This should be protected with admin authentication middleware in production
 router.post('/admin/rotate-secret-key', async (req, res, next) => {

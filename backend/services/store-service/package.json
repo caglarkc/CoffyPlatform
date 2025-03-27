@@ -22,7 +22,8 @@
     "mongoose": "^8.2.0",
     "redis": "^4.6.13",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "jest": "^29.7.0",

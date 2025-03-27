@@ -1,5 +1,5 @@
 /**
- * Auth Service Database Connection Module
+ * Store Service Database Connection Module
  * Handles connections to Redis and MongoDB
  */
 
@@ -7,30 +7,51 @@ const { MongoClient } = require('mongodb');
 const mongoose = require('mongoose');
 const config = require('../config/database');
 const redis = require('../config/redis');
+const { logger } = require('./logger');
 
-// MongoDB connection
-let mongoClient = null;
-let mongoDb = null;
+// MongoDB connections
+let connections = {
+  default: { client: null, db: null }, // storeServiceDB
+  auth: { client: null, db: null }     // authServiceDB
+};
 
 /**
- * Initialize MongoDB connection
+ * Initialize MongoDB connection (storeServiceDB)
  */
 async function connectMongoDB() {
   try {
-    if (!mongoClient) {
-      // MongoClient bağlantısı
-      mongoClient = new MongoClient(config.mongodb.url, config.mongodb.options);
-      await mongoClient.connect();
-      mongoDb = mongoClient.db(config.mongodb.dbName);
+    if (!connections.default.client) {
+      // Store MongoDB bağlantısı (bu servis için varsayılan)
+      connections.default.client = new MongoClient(config.mongodb.url, config.mongodb.options);
+      await connections.default.client.connect();
+      connections.default.db = connections.default.client.db(config.mongodb.dbName);
       
-      // Mongoose bağlantısı
+      // Mongoose bağlantısı (varsayılan - storeServiceDB)
       await mongoose.connect(`${config.mongodb.url}/${config.mongodb.dbName}`, config.mongodb.options);
       
-      console.log('[Auth Service] MongoDB connection established successfully');
+      logger.info('[Store Service] MongoDB connection (storeServiceDB) established successfully');
     }
-    return mongoDb;
+    return connections.default.db;
   } catch (error) {
-    console.error('[Auth Service] MongoDB connection error:', error);
+    logger.error('[Store Service] MongoDB connection error:', { error: error.message, stack: error.stack });
+    throw error;
+  }
+}
+
+/**
+ * Auth veritabanına bağlantı sağlar (authServiceDB - admin, user ve log verileri)
+ */
+async function connectToAuthDB() {
+  try {
+    if (!connections.auth.client) {
+      connections.auth.client = new MongoClient(config.auth.url, config.auth.options);
+      await connections.auth.client.connect();
+      connections.auth.db = connections.auth.client.db(config.auth.dbName);
+      logger.info('[Store Service] Auth DB connection (authServiceDB) established successfully');
+    }
+    return connections.auth.db;
+  } catch (error) {
+    logger.error('[Store Service] Auth DB connection error:', { error: error.message, stack: error.stack });
     throw error;
   }
 }
@@ -43,7 +64,7 @@ async function connectRedis() {
     await redis.connect();
     return redis.redisClient();
   } catch (error) {
-    console.error('[Auth Service] Redis connection error:', error);
+    logger.error('[Store Service] Redis connection error:', { error: error.message, stack: error.stack });
     throw error;
   }
 }
@@ -53,41 +74,57 @@ async function connectRedis() {
  */
 async function closeConnections() {
   try {
-    if (mongoClient) {
-      await mongoClient.close();
-      mongoClient = null;
-      mongoDb = null;
-      console.log('[Auth Service] MongoDB connection closed');
+    // Tüm veritabanı bağlantılarını kapat
+    for (const key in connections) {
+      if (connections[key].client) {
+        await connections[key].client.close();
+        connections[key].client = null;
+        connections[key].db = null;
+        logger.info(`[Store Service] ${key} MongoDB connection closed`);
+      }
     }
     
     // Mongoose bağlantısını kapat
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
-      console.log('[Auth Service] Mongoose connection closed');
+      logger.info('[Store Service] Mongoose connection closed');
     }
     
     await redis.disconnect();
   } catch (error) {
-    console.error('[Auth Service] Error closing database connections:', error);
+    logger.error('[Store Service] Error closing database connections:', { error: error.message, stack: error.stack });
     throw error;
   }
 }
 
 // MongoDB Collection Helpers
-const getCollection = (collectionName) => {
-  if (!mongoDb) {
-    throw new Error('[Auth Service] MongoDB connection not established');
+const getCollection = (collectionName, dbName = 'default') => {
+  if (!connections[dbName] || !connections[dbName].db) {
+    throw new Error(`[Store Service] MongoDB ${dbName} connection not established`);
   }
-  return mongoDb.collection(collectionName);
+  return connections[dbName].db.collection(collectionName);
+};
+
+// Veritabanı bağlantılarını sağlayan yardımcı fonksiyonlar
+const getAuthDb = async () => {
+  if (!connections.auth.db) {
+    await connectToAuthDB();
+  }
+  return connections.auth.db;
 };
 
 module.exports = {
   connectMongoDB,
   connectRedis,
+  connectToAuthDB,
   closeConnections,
-  getMongoDb: () => mongoDb,
-  getRedisClient: () => redis.redisClient(),
+  // Veritabanı bağlantıları
+  getMongoDb: () => connections.default.db,
+  getAuthDb,
+  // Collection yardımcıları  
   getCollection,
+  // Redis client
+  getRedisClient: () => redis.redisClient(),
   // Redis key helpers
   keys: redis.keys
 }; 

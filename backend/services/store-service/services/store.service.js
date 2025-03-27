@@ -41,7 +41,7 @@ class StoreService {
                 stack: error.stack,
                 creatorId: loggedAdmin?._id 
             });
-            next(error);
+            throw error;
         }
     }
 

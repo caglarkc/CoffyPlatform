@@ -209,4 +209,6 @@ describe('Load Tests - Real Auth Service API', () => {
     // Başarılı kayıtlar (HTTP 201) var mı?
     console.log(`201 yanıtı sayısı: ${results.statusCodes['201'] || 0}`);
   }, 15000);
+
+  
 }); 

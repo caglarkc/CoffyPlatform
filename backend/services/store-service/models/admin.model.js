@@ -1,4 +1,8 @@
 const mongoose = require('mongoose');
+const { getAuthConnection } = require('../utils/mongooseConnections');
+
+// Auth veritabanı için mongoose bağlantısını al
+const authConn = getAuthConnection();
 
 const adminSchema = new mongoose.Schema({
     name: {
@@ -49,7 +53,7 @@ const adminSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-
-module.exports = mongoose.model('Admin', adminSchema);
+// Auth veritabanı bağlantısını kullan
+module.exports = authConn.model('Admin', adminSchema);
 
 
