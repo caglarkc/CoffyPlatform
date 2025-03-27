@@ -12,16 +12,22 @@ const validateCreateStore = (data) => {
     
 }
 
-const validateAdminWithPermission = (admin) => {
+const validateAdminWithPermission = (admin, needLevel) => {
     if (!admin) {
         throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
     }
-    if (admin.role < 4) {
+    if (admin.role < needLevel) {
         throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
     }
 }
 
+const validateAdmin = (admin) => {
+    if (!admin) {
+        throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+    }
+}
 module.exports = {
     validateCreateStore,
-    validateAdminWithPermission
+    validateAdminWithPermission,
+    validateAdmin
 }
