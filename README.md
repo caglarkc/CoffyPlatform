@@ -1,8 +1,9 @@
-# CoffyPlatform - Modern Kahve Zinciri Yazılım Ekosistemi
+# CoffyPlatform - Modern Coffee Chain Software Ecosystem
 
 <div align="center">
+  <img src="https://raw.githubusercontent.com/caglarkc/CoffyPlatform/main/docs/assets/coffy-logo.png" alt="Coffy Logo" width="200" height="auto">
   <br/>
-  <p><strong>Kahve deneyimini dijitalleştiren mikro servis mimarisi ile oluşturulmuş kompakt platform</strong></p>
+  <p><strong>A compact platform built with microservice architecture that digitizes the coffee experience</strong></p>
   <br/>
   
   ![GitHub last commit](https://img.shields.io/github/last-commit/caglarkc/CoffyPlatform)
@@ -11,158 +12,157 @@
   ![License](https://img.shields.io/badge/license-MIT-blue)
 </div>
 
-## 📑 İçindekiler
+## 📑 Table of Contents
 
-- [Proje Hakkında](#-proje-hakkında)
-- [Sistem Mimarisi](#-sistem-mimarisi)
-- [Teknoloji Yığını](#-teknoloji-yığını)
-- [Kurulum Talimatları](#-kurulum-talimatları)
-- [Geliştirme Ortamı](#-geliştirme-ortamı)
-- [API Dokümantasyonu](#-api-dokümantasyonu)
+- [About the Project](#-about-the-project)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Installation Instructions](#-installation-instructions)
+- [Development Environment](#-development-environment)
+- [API Documentation](#-api-documentation)
 - [CI/CD Pipeline](#-cicd-pipeline)
-- [Proje Yapısı](#-proje-yapısı)
-- [Katkıda Bulunma](#-katkıda-bulunma)
-- [Sık Sorulan Sorular](#-sık-sorulan-sorular)
-- [Lisans](#-lisans)
-- [İletişim](#-iletişim)
+- [Project Structure](#-project-structure)
+- [Contributing](#-contributing)
+- [FAQ](#-faq)
+- [License](#-license)
+- [Contact](#-contact)
 
-## 🚀 Proje Hakkında
+## 🚀 About the Project
 
-CoffyPlatform, modern kahve zincirlerinin ihtiyaç duyduğu tüm dijital altyapıyı sağlayan kapsamlı bir yazılım ekosistemidir. Müşterilerin mobil uygulama üzerinden sipariş verebilmesinden, ödeme işlemlerine, kampanya yönetiminden raporlamaya kadar tüm süreçleri entegre bir şekilde yönetir.
+CoffyPlatform is a comprehensive software ecosystem that provides all the digital infrastructure needed for modern coffee chains. It manages all processes in an integrated way, from customers ordering through mobile applications to payment transactions, campaign management to reporting.
 
-### Temel Özellikler
+### Key Features
 
-- **Güçlü Kullanıcı Yönetimi**: JWT tabanlı kimlik doğrulama, sosyal medya ile giriş, e-posta doğrulama
-- **Zengin Sipariş Deneyimi**: QR kod ile sipariş, teslimat takibi, geçmiş sipariş görüntüleme
-- **Esnek Ödeme Çözümleri**: Kredi kartı, mobil cüzdan, sadakat puanları ile ödeme
-- **Kampanya Motoru**: Kullanıcıya özel kampanyalar, sadakat programı, hediye çekleri
-- **Gelişmiş Analitik**: Satış analizleri, müşteri davranışları, envanter takibi
-- **Gerçek Zamanlı Bildirimler**: Sipariş durumu bildirimleri, özel teklifler, hatırlatmalar
+- **Strong User Management**: JWT-based authentication, social media login, email verification
+- **Rich Order Experience**: QR code ordering, delivery tracking, order history viewing
+- **Flexible Payment Solutions**: Credit card, mobile wallet, loyalty points payment
+- **Campaign Engine**: User-specific campaigns, loyalty program, gift vouchers
+- **Advanced Analytics**: Sales analysis, customer behavior, inventory tracking
+- **Real-time Notifications**: Order status notifications, special offers, reminders
 
-## 🏗 Sistem Mimarisi
+## 🏗 System Architecture
 
-CoffyPlatform, mikroservis mimarisi ile tasarlanmış olup her bir servis kendi sorumluluğunu bağımsız olarak yönetir:
+CoffyPlatform is designed with a microservices architecture where each service independently manages its own responsibility:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/caglarkc/CoffyPlatform/main/docs/assets/architecture-diagram.png" alt="Sistem Mimarisi" width="800" height="auto">
+  <img src="https://raw.githubusercontent.com/caglarkc/CoffyPlatform/main/docs/assets/architecture-diagram.png" alt="System Architecture" width="800" height="auto">
 </div>
 
-### Backend Mimarisi
+### Backend Architecture
 
-- **API Gateway**: Tüm isteklerin yönlendirildiği merkezi giriş noktası
-- **Service Registry**: Servislerin kayıt ve keşif mekanizması
-- **Config Server**: Merkezi konfigürasyon yönetimi
-- **Circuit Breaker**: Servis hatalarına karşı dayanıklılık sağlayan mekanizma
-- **Mikroservisler**: Bağımsız geliştirilebilen, ölçeklenebilen servisler
-  - Auth Service: Kimlik doğrulama ve yetkilendirme
-  - Menu Service: Ürün ve menü yönetimi
-  - Order Service: Sipariş işleme ve takibi
-  - Payment Service: Ödeme işlemleri
-  - Campaign Service: Promosyon ve kampanya yönetimi
-  - Notification Service: Bildirim gönderimi
-  - Report Service: Analitik ve raporlama
+- **API Gateway**: Central entry point for all requests
+- **Service Registry**: Service registration and discovery mechanism
+- **Config Server**: Central configuration management
+- **Circuit Breaker**: Mechanism providing resilience against service failures
+- **Microservices**: Independently developable, scalable services
+  - Auth Service: Authentication and authorization
+  - Menu Service: Product and menu management
+  - Order Service: Order processing and tracking
+  - Payment Service: Payment transactions
+  - Campaign Service: Promotion and campaign management
+  - Notification Service: Notification sending
+  - Report Service: Analytics and reporting
 
-### Frontend Mimarisi
+### Frontend Architecture
 
-- **Android Mobil Uygulama**: Müşteriler için native mobil deneyim
-- **Yönetim Paneli (Web)**: İşletme sahipleri için yönetim arayüzü (planlanan)
+- **Android Mobile Application**: Native mobile experience for customers
+- **Management Panel (Web)**: Management interface for business owners (planned)
 
-## 💻 Teknoloji Yığını
+## 💻 Technology Stack
 
 ### Backend
-- **Programlama Dili**: Node.js, TypeScript
+- **Programming Language**: Node.js, TypeScript
 - **API Framework**: Express.js
-- **Kimlik Doğrulama**: JWT, OAuth 2.0
-- **Veritabanı**: MongoDB (Mikroservisler için)
-- **Mesajlaşma**: RabbitMQ (Servisler arası iletişim)
-- **Docker & Kubernetes**: Konteynerizasyon ve orkestrasyon
+- **Authentication**: JWT, OAuth 2.0
+- **Database**: MongoDB (for Microservices)
+- **Messaging**: RabbitMQ (Inter-service communication)
+- **Docker & Kubernetes**: Containerization and orchestration
 - **CI/CD**: GitHub Actions
-- **API Dokümantasyonu**: Swagger/OpenAPI
-- **Test**: Jest, Supertest
+- **API Documentation**: Swagger/OpenAPI
+- **Testing**: Jest, Supertest
 
 ### Frontend
-- **Android**: Java, MVVM mimarisi
-- **Ağ İstekleri**: Retrofit, OkHttp
-- **Yerel Veritabanı**: Room
-- **Görüntü Yükleme**: Glide
+- **Android**: Java, MVVM architecture
+- **Network Requests**: Retrofit, OkHttp
+- **Local Database**: Room
+- **Image Loading**: Glide
 - **Dependency Injection**: Dagger Hilt
-- **Asenkron İşlemler**: Coroutines
-- **UI Bileşenleri**: Material Design Components
-- **Test**: JUnit, Espresso
+- **Asynchronous Operations**: Coroutines
+- **UI Components**: Material Design Components
+- **Testing**: JUnit, Espresso
 
-## 🔧 Kurulum Talimatları
+## 🔧 Installation Instructions
 
-### Ön Gereksinimler
+### Prerequisites
 
-- Node.js v16 veya üzeri
-- MongoDB v4.4 veya üzeri
-- Docker ve Docker Compose
-- Android Studio (mobil uygulama geliştirmek için)
+- Node.js v16 or higher
+- MongoDB v4.4 or higher
+- Docker and Docker Compose
+- Android Studio (for mobile app development)
 
-### Backend Kurulumu
+### Backend Installation
 
-Tüm mikroservisleri Docker ile çalıştırmak için:
+To run all microservices with Docker:
 
 ```bash
-# Ana dizine gidin
+# Navigate to the main directory
 cd CoffyPlatform
 
-# Docker container'ları başlatın
+# Start Docker containers
 docker-compose up
 ```
 
-Veya manuel olarak geliştirme ortamında çalıştırmak için:
+Or to run manually in development environment:
 
 ```bash
-# Backend ana dizinine gidin
+# Navigate to backend directory
 cd backend
 
-# Bağımlılıkları yükleyin
+# Install dependencies
 npm install
 
-# Tüm servisleri başlatın
+# Start all services
 npm run start:all
 
-# Sadece belirli bir servisi başlatmak için
+# To start a specific service
 cd services/auth-service
 npm install
 npm start
 ```
 
-### Frontend Kurulumu
+### Frontend Installation
 
 ```bash
-# Android Studio'yu açın ve projeyi içe aktarın
+# Open Android Studio and import the project
 cd frontend/Coffyapp
 
-# Gradle senkronizasyonunu tamamlayın
-# Emülatör veya fiziksel cihaz seçin
-# Run butonuna tıklayın
+# Complete Gradle synchronization
+# Select emulator or physical device
+# Click Run button
 ```
 
-Detaylı kurulum talimatları için [backend/README.md](backend/README.md) ve [frontend/README.md](frontend/README.md) dosyalarına bakabilirsiniz.
+For detailed installation instructions, see [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md).
 
-## 💡 Geliştirme Ortamı
+## 💡 Development Environment
 
-### Önerilen IDE'ler
+### Recommended IDEs
 - **Backend**: Visual Studio Code
 - **Frontend**: Android Studio
 
-### Yararlı Eklentiler
-- ESLint ve Prettier (Backend)
+### Useful Extensions
+- ESLint and Prettier (Backend)
 - Kotlin Plugin (Frontend)
-- MongoDB Compass (Veritabanı Yönetimi)
-- Postman (API Testi)
+- MongoDB Compass (Database Management)
+- Postman (API Testing)
 
-### Kod Standardı
-Bu projede:
-- Backend için [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript)
-- Frontend için [Android Kotlin Style Guide](https://developer.android.com/kotlin/style-guide)
-kuralları uygulanmaktadır.
+### Code Standards
+This project follows:
+- [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript) for Backend
+- [Android Kotlin Style Guide](https://developer.android.com/kotlin/style-guide) for Frontend
 
-## 📚 API Dokümantasyonu
+## 📚 API Documentation
 
-Her mikroservis kendi API dokümantasyonunu Swagger UI üzerinden sağlar:
+Each microservice provides its own API documentation through Swagger UI:
 
 - Auth Service: `http://localhost:3001/api-docs`
 - Menu Service: `http://localhost:3002/api-docs`
@@ -172,101 +172,101 @@ Her mikroservis kendi API dokümantasyonunu Swagger UI üzerinden sağlar:
 - Notification Service: `http://localhost:3006/api-docs`
 - Report Service: `http://localhost:3007/api-docs`
 
-Ek olarak, tüm API'leri bir arada görmek için API Gateway'in Swagger UI'sini kullanabilirsiniz:
+Additionally, you can use the API Gateway's Swagger UI to see all APIs together:
 `http://localhost:3000/api-docs`
 
 ## 🔄 CI/CD Pipeline
 
-Bu proje, GitHub Actions kullanılarak sürekli entegrasyon ve dağıtım süreçlerini otomatize eder:
+This project automates continuous integration and deployment processes using GitHub Actions:
 
-- **Lint Kontrolü**: ESLint ile kod standardı kontrolü
-- **Birim Testler**: Jest ile otomatik test çalıştırma
-- **Entegrasyon Testleri**: Servislerin birlikte çalışmasını test etme
-- **Docker İmaj Oluşturma**: CI sürecinde Docker imajları oluşturma
-- **Otomatik Dağıtım**: Test ortamına otomatik dağıtım, production dağıtımı için manuel onay
+- **Lint Check**: Code standard check with ESLint
+- **Unit Tests**: Automatic test execution with Jest
+- **Integration Tests**: Testing service interoperability
+- **Docker Image Creation**: Creating Docker images in CI process
+- **Automatic Deployment**: Automatic deployment to test environment, manual approval for production deployment
 
-## 📊 Proje Yapısı
+## 📊 Project Structure
 
 ```
 CoffyPlatform/
-├── backend/                      # Backend ana dizini
-│   ├── config/                   # Ortak konfigürasyon dosyaları
+├── backend/                      # Backend main directory
+│   ├── config/                   # Common configuration files
 │   ├── gateway/                  # API Gateway
-│   ├── services/                 # Mikroservisler
-│   │   ├── auth-service/         # Kimlik doğrulama servisi
-│   │   ├── menu-service/         # Menü ve ürün servisi
-│   │   ├── order-service/        # Sipariş işleme servisi
-│   │   ├── payment-service/      # Ödeme işleme servisi
-│   │   ├── campaign-service/     # Kampanya yönetim servisi
-│   │   ├── notification-service/ # Bildirim servisi
-│   │   └── report-service/       # Raporlama servisi
-│   ├── shared/                   # Servisler arası paylaşılan kod ve utility'ler
-│   ├── docker-compose.yml        # Docker yapılandırma dosyası
-│   └── README.md                 # Backend dokümantasyonu
+│   ├── services/                 # Microservices
+│   │   ├── auth-service/         # Authentication service
+│   │   ├── menu-service/         # Menu and product service
+│   │   ├── order-service/        # Order processing service
+│   │   ├── payment-service/      # Payment processing service
+│   │   ├── campaign-service/     # Campaign management service
+│   │   ├── notification-service/ # Notification service
+│   │   └── report-service/       # Reporting service
+│   ├── shared/                   # Shared code and utilities between services
+│   ├── docker-compose.yml        # Docker configuration file
+│   └── README.md                 # Backend documentation
 │
-├── frontend/                     # Frontend ana dizini
-│   └── Coffyapp/                 # Android uygulaması
-│       ├── app/                  # Uygulama kodu
-│       ├── gradle/               # Gradle yapılandırma
-│       └── README.md             # Frontend dokümantasyonu
+├── frontend/                     # Frontend main directory
+│   └── Coffyapp/                 # Android application
+│       ├── app/                  # Application code
+│       ├── gradle/               # Gradle configuration
+│       └── README.md             # Frontend documentation
 │
-├── docs/                         # Teknik dokümantasyon ve görseller
-│   ├── assets/                   # Görseller, diyagramlar
-│   ├── api/                      # API belgeleri
-│   └── architecture/             # Mimari belgeler
+├── docs/                         # Technical documentation and assets
+│   ├── assets/                   # Images, diagrams
+│   ├── api/                      # API documents
+│   └── architecture/             # Architecture documents
 │
-├── .github/                      # GitHub Actions workflow tanımları
-├── .gitignore                    # Git tarafından yok sayılacak dosyalar
-├── LICENSE                       # Lisans bilgisi
-└── README.md                     # Bu dosya
+├── .github/                      # GitHub Actions workflow definitions
+├── .gitignore                    # Files to be ignored by Git
+├── LICENSE                       # License information
+└── README.md                     # This file
 ```
 
-Detaylı proje yapısı için [backend/README.md](backend/README.md) ve [frontend/README.md](frontend/README.md) dosyalarına bakabilirsiniz.
+For detailed project structure, see [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md).
 
-## 👥 Katkıda Bulunma
+## 👥 Contributing
 
-Bu projeye katkıda bulunmak istiyorsanız, lütfen şu adımları izleyin:
+To contribute to this project, please follow these steps:
 
-1. Projeyi fork edin
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add some amazing feature'`)
-4. Branch'inize push edin (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to your branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Detaylı katkıda bulunma kuralları için `CONTRIBUTING.md` dosyasına bakabilirsiniz.
+For detailed contribution rules, see the `CONTRIBUTING.md` file.
 
-## ❓ Sık Sorulan Sorular
+## ❓ FAQ
 
 <details>
-<summary><b>Proje nasıl bir mimariye sahip?</b></summary>
+<summary><b>What architecture does the project have?</b></summary>
 <p>
-CoffyPlatform, mikroservis mimarisi üzerine inşa edilmiştir. Her bir servis belirli bir iş fonksiyonunu yerine getirir ve bağımsız olarak geliştirilebilir, test edilebilir ve dağıtılabilir.
+CoffyPlatform is built on a microservices architecture. Each service performs a specific business function and can be developed, tested, and deployed independently.
 </p>
 </details>
 
 <details>
-<summary><b>Backend servisleri nasıl iletişim kurar?</b></summary>
+<summary><b>How do backend services communicate?</b></summary>
 <p>
-Servisler arası iletişim REST API ve RabbitMQ mesajlaşma sistemi üzerinden gerçekleştirilir. Senkron iletişim için REST API, asenkron işlemler için ise RabbitMQ kullanılır.
+Inter-service communication is carried out through REST API and RabbitMQ messaging system. REST API is used for synchronous communication, while RabbitMQ is used for asynchronous operations.
 </p>
 </details>
 
 <details>
-<summary><b>Mobil uygulama hangi platformları destekler?</b></summary>
+<summary><b>Which platforms does the mobile application support?</b></summary>
 <p>
-Şu anda Android platformu için native bir uygulama bulunmaktadır. iOS desteği gelecek sürümlerde planlanmaktadır.
+Currently, there is a native application for the Android platform. iOS support is planned for future versions.
 </p>
 </details>
 
-## 📄 Lisans
+## 📄 License
 
-Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## 📞 İletişim
+## 📞 Contact
 
 Çağlar Koçer - [alicaglarkocer@gmail.com](mailto:alicaglarkocer@gmail.com)
 
-Proje Bağlantısı: [https://github.com/caglarkc/CoffyPlatform](https://github.com/caglarkc/CoffyPlatform)
+Project Link: [https://github.com/caglarkc/CoffyPlatform](https://github.com/caglarkc/CoffyPlatform)
 
 ---
-⭐️ **CoffyPlatform** - Kahve severlere modern dijital deneyim sunarak işletmelerin büyümesine katkı sağlar.
+⭐️ **CoffyPlatform** - Contributes to business growth by providing modern digital experiences to coffee lovers.

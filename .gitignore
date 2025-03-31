@@ -32,6 +32,18 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# Winston Log Dosyaları
+**/logs/
+**/*.log
+**/error.log
+**/combined.log
+**/http.log
+**/exceptions.log
+**/rejections.log
+**/info.log
+**/warn.log
+**/*.log.*
+**/*.log.gz
 
 # Runtime data
 pids
