@@ -1,7 +1,7 @@
 # CoffyPlatform - Modern Coffee Chain Software Ecosystem
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/caglarkc/CoffyPlatform/main/docs/assets/coffy-logo.png" alt="Coffy Logo" width="200" height="auto">
+  
   <br/>
   <p><strong>A compact platform built with microservice architecture that digitizes the coffee experience</strong></p>
   <br/>
