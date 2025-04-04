@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const asyncHandler = require('../../../../shared/middlewares/errorHandler/asyncHandler');
-const keyRotationService = require('../../../../shared/services/security/keyRotation.service');
 
 // Controller'ın register metodunu asyncHandler ile sarıyoruz
 router.post('/register', asyncHandler(authController.register.bind(authController)));
