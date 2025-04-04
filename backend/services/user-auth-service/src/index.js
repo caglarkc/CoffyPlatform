@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
-const adminRoutes = require('./routes/admin.routes');
 const { requestContextMiddleware } = require('../../../shared/middlewares/requestContext');
 const errorHandler = require('../../../shared/middlewares/errorHandler/errorHandler');
 const keyRotationService = require('../../../shared/services/security/keyRotation.service');
@@ -38,7 +37,6 @@ app.use(requestContextMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
 
 // Error middleware - tüm route'lardan sonra eklenmelidir
 app.use(errorHandler);
@@ -46,9 +44,9 @@ app.use(errorHandler);
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ 
-    service: 'Auth Service',
+    service: 'User Auth Service',
     status: 'running',
-    message: 'Auth Service is running with MongoDB and Redis connections' 
+    message: 'User Auth Service is running with MongoDB and Redis connections' 
   });
 });
 

@@ -22,7 +22,7 @@ const {
 
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || 3004; // Store service port
+const PORT = process.env.PORT || 3002; // Store service port
 
 // CORS middleware - Frontend'in 3000 portundan isteklere izin ver
 app.use(cors({

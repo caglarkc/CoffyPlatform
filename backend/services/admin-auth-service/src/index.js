@@ -4,25 +4,23 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const {requestContextMiddleware} = require('../../../shared/middlewares/requestContext');
+const adminAuthRoutes = require('./routes/admin.auth.routes');
+const { requestContextMiddleware } = require('./middlewares/requestContext');
 const errorHandler = require('../../../shared/middlewares/errorHandler/errorHandler');
-const {logger , httpLogger} = require('../../../shared/utils/logger');
 const keyRotationService = require('../../../shared/services/security/keyRotation.service');
-const { initializeMongooseConnections } = require('./utils/mongooseConnections');
-
-// Import routes
-const storeRoutes = require('./routes/store.routes');
+const { logger, httpLogger } = require('../../../shared/utils/logger');
+const eventBus = require('../../../shared/services/event/eventBus.service');
+const adminAuthService = require('./services/admin.auth.service');
 
 const { 
   connectMongoDB, 
-  closeConnections,
-  connectRedis,
-  getAuthDb
+  connectRedis, 
+  closeConnections 
 } = require('./utils/database');
 
 // Create Express application
 const app = express();
-const PORT = process.env.PORT || 3004; // Store service port
+const PORT = process.env.PORT || 3002; // Auth service port
 
 // CORS middleware - Frontend'in 3000 portundan isteklere izin ver
 app.use(cors({
@@ -39,8 +37,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestContextMiddleware);
 
-// Register routes
-app.use('/api/store', storeRoutes);
+// Routes
+app.use('/api/admin-auth', adminAuthRoutes);
 
 // Error middleware - tüm route'lardan sonra eklenmelidir
 app.use(errorHandler);
@@ -48,26 +46,20 @@ app.use(errorHandler);
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ 
-    service: 'Store Service',
+    service: 'Admin Auth Service',
     status: 'running',
-    message: 'Store Service is running with MongoDB and Redis connections' 
+    message: 'Admin Auth Service is running with MongoDB and Redis connections' 
   });
 });
 
 // Initialize database connections
 async function initializeDatabases() {
   try {
-    // Connect to MongoDB - store veritabanı (varsayılan)
+    // Connect to MongoDB
     await connectMongoDB();
-
+    
     // Connect to Redis
     await connectRedis();
-    
-    // Auth veritabanına bağlan (admin, user ve log verileri)
-    await getAuthDb();
-    
-    // Mongoose bağlantılarını başlat
-    await initializeMongooseConnections();
     
     logger.info('All database connections established successfully');
   } catch (error) {
@@ -99,6 +91,20 @@ function initializeKeyRotation() {
   }
 }
 
+// Initialize event bus and listeners
+async function initializeEventBus() {
+  try {
+    await eventBus.connect();
+    logger.info('EventBus connection established successfully');
+    
+    // Initialize event listeners for admin service
+    await adminAuthService.initializeEventListeners();
+    logger.info('Admin service event listeners initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize EventBus', { error: error.message, stack: error.stack });
+  }
+}
+
 // Start the server
 async function startServer() {
   try {
@@ -107,6 +113,9 @@ async function startServer() {
     
     // Initialize key rotation service
     const keyRotationJob = initializeKeyRotation();
+    
+    // Initialize event bus for inter-service communication
+    await initializeEventBus();
     
     // Start listening
     app.listen(PORT, () => {
@@ -120,6 +129,11 @@ async function startServer() {
         keyRotationJob.stop();
         logger.info('Key rotation service stopped');
       }
+      
+      // Close EventBus connection
+      await eventBus.close();
+      logger.info('EventBus connection closed');
+      
       await closeConnections();
       process.exit(0);
     });
@@ -130,6 +144,11 @@ async function startServer() {
         keyRotationJob.stop();
         logger.info('Key rotation service stopped');
       }
+      
+      // Close EventBus connection
+      await eventBus.close();
+      logger.info('EventBus connection closed');
+      
       await closeConnections();
       process.exit(0);
     });
