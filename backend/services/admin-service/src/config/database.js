@@ -7,7 +7,7 @@ module.exports = {
   // MongoDB connection settings
   mongodb: {
     url: 'mongodb://localhost:27017',
-    dbName: 'adminAuthServiceDB',
+    dbName: 'adminServiceDB',
     options: {
       serverSelectionTimeoutMS: 5000, // 5 saniye sonra timeout
       socketTimeoutMS: 45000, // 45 saniye sonra socket timeout
@@ -15,7 +15,7 @@ module.exports = {
   },
   testDB: {
     url: 'mongodb://localhost:27017',
-    dbName: 'adminAuthServiceDBTest',
+    dbName: 'adminServiceDBTest',
     options: {
       serverSelectionTimeoutMS: 5000, // 5 saniye sonra timeout
     }
