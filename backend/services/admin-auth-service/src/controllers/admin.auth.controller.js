@@ -177,6 +177,30 @@ class AdminAuthController {
         }
     }
 
+    /**
+     * Test endpoint for checking if this service is running
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object 
+     */
+    async testService(req, res) {
+        try {
+            return res.status(200).json({
+                success: true,
+                message: "Admin-Auth servisi çalışıyor",
+                serviceInfo: {
+                    name: "admin-auth-service",
+                    status: "active",
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            return res.status(500).json({ 
+                success: false, 
+                message: error.message 
+            });
+        }
+    }
+
     
 }
 

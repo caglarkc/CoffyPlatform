@@ -11,15 +11,18 @@ const tokenService = require('../../../../shared/services/token.service');
 const { getRedisClient } = require('../utils/database');
 const { getRequestContext } = require('../middlewares/requestContext');
 const { logger } = require('../../../../shared/utils/logger');
-const {validatePhone , validateEmail} = require('../../../../shared/utils/textUtils');
+const {validatePhone , validateEmail, validateName, validateSurname} = require('../../../../shared/utils/textUtils');
 const {validateAdminRegister} = require('../../../../shared/utils/validationUtils');
-const eventBus = require('../../../../shared/services/event/eventBus.service');
+const eventPublisher = require('../../../../shared/services/event/eventPublisher');
+const eventSubscriber = require('../../../../shared/services/event/eventSubscriber');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const _formatAdminResponse = (admin) => {
     return {
         id: admin._id,
+        email: admin.email,
+        phone: admin.phone,
         name: admin.name,
         surname: admin.surname,
         role: admin.role,
@@ -54,8 +57,7 @@ class AdminAuthService {
                 password: hashedPassword,
                 role: 5,
                 status: "active",
-                whoCreate: null,
-                isLoggedIn: false
+                whoCreate: null
             });
 
             creator.save();
@@ -72,7 +74,7 @@ class AdminAuthService {
         }
     }
 
-    async checkCreator(email, password) {
+    async _checkCreator(email, password) {
         const isCreatorEmail = helpers.verifyCreatorEmail(email);
         const isCreatorPassword = helpers.verifyCreatorPassword(password);
 
@@ -89,8 +91,8 @@ class AdminAuthService {
         return admin; // Doğrudan admin nesnesini dön
     }
 
-    async checkAdmin(email, password) {
-        const admin = await Admin.findOne({email: helpers.hashAdminData(email)});
+    async _checkAdmin(email, password) {
+        const admin = await Admin.findOne({email: email});
         if (!admin) {
             throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
         }
@@ -108,7 +110,7 @@ class AdminAuthService {
             const phone = data.phone;
             validatePhone(phone);
             
-            const admin = await Admin.findOne({ phone: helpers.hashAdminData(phone) });
+            const admin = await Admin.findOne({ phone: phone });
             if (admin) {
                 throw new ConflictError(errorMessages.CONFLICT.PHONE_ALREADY_EXISTS);
             }
@@ -125,7 +127,7 @@ class AdminAuthService {
         try {
             const email = data.email;
             validateEmail(email);
-            const admin = await Admin.findOne({ email: helpers.hashAdminData(email) });
+            const admin = await Admin.findOne({ email: email });
             if (admin) {
                 throw new ConflictError(errorMessages.CONFLICT.EMAIL_ALREADY_EXISTS);
             }
@@ -147,8 +149,8 @@ class AdminAuthService {
             });
             
             const {name, surname, email, phone, password, role, city, region, district, storeId} = data;
-            const existingEmail = await Admin.findOne({email: helpers.hashAdminData(email)});
-            const existingPhone = await Admin.findOne({phone: helpers.hashAdminData(phone)});
+            const existingEmail = await Admin.findOne({email: email});
+            const existingPhone = await Admin.findOne({phone: phone});
     
             if (existingEmail) {
                 logger.warn('Admin registration failed - email exists', { email });
@@ -160,13 +162,14 @@ class AdminAuthService {
                 throw new ConflictError(errorMessages.CONFLICT.PHONE_ALREADY_EXISTS);
             }
 
+
             validateAdminRegister(data, loggedAdmin.role);
 
             const newAdmin = new Admin({
                 name,
                 surname,
-                email: helpers.hashAdminData(email),
-                phone: helpers.hashAdminData(phone),
+                email: email,
+                phone: phone,
                 password: helpers.hashAdminData(password),
                 role: role,
                 location: {
@@ -207,9 +210,9 @@ class AdminAuthService {
             const { email, password } = data;
     
             // Yöneticiyi kontrol et
-            let admin = await this.checkCreator(email, password);
+            let admin = await this._checkCreator(email, password);
             if (!admin) {
-                admin = await this.checkAdmin(email, password);
+                admin = await this._checkAdmin(email, password);
             }
 
             if (!admin) {
@@ -248,8 +251,6 @@ class AdminAuthService {
                     const tokenPair = tokenService.createTokenPair(admin._id);
                     const accessToken = tokenPair.accessToken;
 
-                    admin.isLoggedIn = true;
-                    await admin.save();
 
                     // Redis'e yeni access token'ı kaydet
                     await redisService.put(`auth:access:${admin._id}`, accessToken, 900); // 15 minutes
@@ -269,9 +270,7 @@ class AdminAuthService {
             // Yeni token çifti oluştur
             const tokenPair = tokenService.createTokenPair(admin._id);
 
-            // Redis'e kaydet
-            await redisService.put(`auth:access:${admin._id}`, tokenPair.accessToken, 900); // 15 minutes
-            await redisService.put(`auth:refresh:${admin._id}`, tokenPair.refreshToken, 3600 * 7); // 7 hours
+            
 
             // RequestContext güncelle
             const requestContext = getRequestContext();
@@ -279,8 +278,9 @@ class AdminAuthService {
             requestContext.setData('adminRole', admin.role);
             requestContext.setData('adminName', admin.name);
 
-            admin.isLoggedIn = true;
-            await admin.save();
+            // Redis'e kaydet
+            await redisService.put(`auth:access:${admin._id}`, tokenPair.accessToken, 900); // 15 minutes
+            await redisService.put(`auth:refresh:${admin._id}`, tokenPair.refreshToken, 3600 * 7); // 7 hours
    
             
             logger.info('Admin logged in successfully', { adminId: admin._id, role: admin.role });
@@ -343,15 +343,7 @@ class AdminAuthService {
             await redisClient.del(`auth:access:${adminId}`);
             await redisClient.del(`auth:refresh:${adminId}`);
             
-            const admin = await Admin.findById(adminId);
-            if (admin) {
-                admin.isLoggedIn = false;
-                await admin.save();
-            } else {
-                logger.warn('Admin logout - admin not found in database', { adminId });
-            }
-            
-            
+
             logger.info('Admin logged out successfully', { adminId });
 
             return {
@@ -405,8 +397,7 @@ class AdminAuthService {
                 password: hashedPassword,
                 role: 5,
                 status: "active",
-                whoCreate: null,
-                isLoggedIn: false
+                whoCreate: null
             });
 
             return creator;
@@ -423,80 +414,212 @@ class AdminAuthService {
             // Servis başladığında kalıcı kuyruklar ile olay dinleme
             const queueNamePrefix = 'admin-auth-service.queue';
             
-            // Admin servisinden gelen olayları dinle
-            await eventBus.subscribe('admin.admin.*', this._handleAdminEvents.bind(this), {
-                queueName: `${queueNamePrefix}.admin-events`,
+            // Admin.getAdmin için responder ekle
+            await eventSubscriber.respondTo('admin.auth.testCommunication', async (payload, metadata) => {
+                logger.info('Received test communication request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+                
+                return {
+                    success: true,
+                    message: "İletişim başarılı",
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+            }, {
+                queueName: `${queueNamePrefix}.testCommunication-responder`,
                 durable: true
             });
             
-            
+            await eventSubscriber.respondTo('admin.auth.getAdmin', async (payload, metadata) => {
+                logger.info('Received getAdmin request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                return {
+                    success: true,
+                    message: "Admin bulundu",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+            });
+
+            await eventSubscriber.respondTo('admin.auth.changeAdminDataMany',async(payload,metadata)=>{
+                logger.info('Received changeAdminDataMany request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                try {
+                    const admin = await Admin.findById(payload.adminId);
+                    if (!admin) {
+                        return {
+                            success: false,
+                            message: "Admin bulunamadı",
+                            receivedData: payload,
+                            timestamp: new Date().toISOString()
+                        };
+                    }
+
+                    const {name, surname, email, phone} = payload.newData;
+                    if (!name && !surname && !email && !phone) {
+                        throw new ValidationError(errorMessages.INVALID.NO_PENDING_REQUEST);
+                    }
+
+                    // Sadece gönderilen değerleri kontrol et
+                    let isChanged = false;
+                    
+                    if (name && name === admin.name) {
+                        // İsim gönderilmiş ama değişmemiş
+                    } else if (name) {
+                        isChanged = true;
+                    }
+                    
+                    if (surname && surname === admin.surname) {
+                        // Soyisim gönderilmiş ama değişmemiş
+                    } else if (surname) {
+                        isChanged = true;
+                    }
+                    
+                    if (email && email === admin.email) {
+                        // Email gönderilmiş ama değişmemiş
+                    } else if (email) {
+                        isChanged = true;
+                    }
+                    
+                    if (phone && phone === admin.phone) {
+                        // Telefon gönderilmiş ama değişmemiş
+                    } else if (phone) {
+                        isChanged = true;
+                    }
+                    
+                    if (!isChanged) {
+                        throw new ValidationError(errorMessages.INVALID.NO_PENDING_REQUEST);
+                    }
+
+                    if (name) {
+                        validateName(name);
+                        admin.name = name;
+                    }
+                    if (surname) {
+                        validateSurname(surname);
+                        admin.surname = surname;
+                    }
+                    if (email) {
+                        validateEmail(email);
+                        admin.email = email;
+                    }   
+                    if (phone) {
+                        validatePhone(phone);
+                        admin.phone = phone;
+                    }
+
+                    await admin.save();
+                    return {
+                        success: true,
+                            message: "Admin bilgileri başarıyla güncellendi",
+                            admin: _formatAdminResponse(admin),
+                            receivedData: payload,
+                            timestamp: new Date().toISOString()
+                        };
+                } catch (error) {
+                    logger.error('Error updating admin data', {
+                        error: error.message,
+                        stack: error.stack,
+                        adminId: payload.adminId
+                    });
+
+                    return {
+                        success: false,
+                        message: error.message,
+                        error: error.name,
+                        code: error.statusCode || 400,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+            });
+
+            await eventSubscriber.respondTo('admin.auth.changeAdminDataJustOne',async(payload,metadata)=>{
+                logger.info('Received changeAdminDataJustOne request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                try {
+                    const admin = await Admin.findById(payload.adminId);
+                    if (!admin) {
+                        throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+                    }
+
+                    if (payload.type === "name") {
+                        validateName(payload.newData);
+                        admin.name = payload.newData;
+                    }
+                    if (payload.type === "surname") {
+                        validateSurname(payload.newData);
+                        admin.surname = payload.newData;
+                    }
+                    if (payload.type === "email") {
+                        validateEmail(payload.newData);
+                        admin.email = payload.newData;
+                    }
+                    if (payload.type === "phone") {
+                        validatePhone(payload.newData);
+                        admin.phone = payload.newData;
+                    }
+                    
+                    await admin.save();
+
+                    return {
+                        success: true,
+                        message: `Admin ${payload.type} bilgisi başarıyla güncellendi`,
+                        admin: _formatAdminResponse(admin),
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                } catch (error) {
+                    logger.error(`Error updating admin ${payload.type}`, {
+                        error: error.message,
+                        stack: error.stack,
+                        adminId: payload.adminId
+                    });
+                    
+                    return {
+                        success: false,
+                        message: error.message,
+                        error: error.name,
+                        code: error.statusCode || 400,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+              
+            });
+
             logger.info('Admin-Auth service event listeners initialized');
         } catch (error) {
             logger.error('Failed to initialize event listeners', { error: error.message, stack: error.stack });
+            throw error;
         }
     }
-
-    // Admin servisinden gelen olayları işleyen metot
-    async _handleAdminEvents(data, metadata) {
-        try {
-            logger.info('Received admin event', { topic: metadata.topic, adminId: data.adminId });
-            
-            // Admin güncelleme olaylarını işle
-            if (metadata.topic === 'admin.admin.nameUpdate') {
-
-
-
-                const { adminId, value } = data;
-                
-                // Admin profil verilerini güncelle
-                const admin = await Admin.findById(adminId);
-                if (admin) {
-                    // Sadece izin verilen alanları güncelle
-                    if (value.name) admin.name = value.name;
-                    
-                    await admin.save();
-                    logger.info('Admin name updated from event', { adminId });
-                }
-            }
-            
-        } catch (error) {
-            logger.error('Error handling admin event', { error: error.message, data, metadata });
-        }
-    }
-
-/*   
-    // Store servisinden gelen olayları işleyen metot
-    async _handleStoreEvents(data, metadata) {
-        try {
-            logger.info('Received store event', { topic: metadata.topic, storeId: data.storeId });
-            
-            // Admin-store ilişkisi değişikliklerini işle
-            if (metadata.topic === 'store.admin.assigned') {
-                const { adminId, storeId, location } = data;
-                
-                // Admin lokasyonunu güncelle
-                const admin = await Admin.findById(adminId);
-                if (admin) {
-                    admin.location = {
-                        ...admin.location,
-                        storeId,
-                        ...(location || {})
-                    };
-                    await admin.save();
-                    logger.info('Admin store assignment updated from event', { adminId, storeId });
-                }
-            }
-        } catch (error) {
-            logger.error('Error handling store event', { error: error.message, data, metadata });
-        }
-    }
-*/
-
-
-
-
-
-    
 
     // Refresh token ile yeni access token oluşturma metodu
     async refreshAccessToken(adminId, refreshToken) {

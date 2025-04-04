@@ -42,10 +42,6 @@ const adminSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'blocked', 'deleted'],
         default: 'active'
-    },
-    isLoggedIn: {
-        type: Boolean,
-        default: false
     }
 }, { timestamps: true });
 
