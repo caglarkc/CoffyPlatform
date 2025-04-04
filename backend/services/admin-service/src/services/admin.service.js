@@ -10,100 +10,258 @@ const redisService = require('../../../../shared/services/redis.service');
 const tokenService = require('../../../../shared/services/token.service');
 const { validateName , validateSurname ,validatePassword} = require('../../../../shared/utils/textUtils');
 const { getRedisClient } = require('../utils/database');
-const { getRequestContext } = require('../../../../shared/middlewares/requestContext');
 const { logger } = require('../../../../shared/utils/logger');
-const eventBus = require('../../../../shared/services/event/eventBus.service');
+const eventPublisher = require('../../../../shared/services/event/eventPublisher');
+const eventSubscriber = require('../../../../shared/services/event/eventSubscriber');
+const dotenv = require('dotenv');
+dotenv.config();
 
+const _formatAdminResponse = (admin) => {
+    return {
+        id: admin._id,
+        email: admin.email,
+        phone: admin.phone,
+        name: admin.name,
+        surname: admin.surname,
+        role: admin.role,
+        location: admin.location,
+        whoCreate: admin.whoCreate
+    };
+};
 
 
 class AdminService {
-    
-    /**
-     * Update an admin's name and publish event to admin-auth-service
-     * @param {string} adminId - The ID of the admin to update
-     * @param {string} name - The new name value
-     * @returns {Object} - Result object with updated admin and message
-     */
-    async updateAdminName(adminId, name) {
+
+    async testCommunication(testData) {
         try {
-            logger.info('Updating admin name', { adminId, name });
+            logger.info('Testing communication with auth service', { testData });
             
-            if (!validateName(name)) {
-                throw new ValidationError(errorMessages.INVALID.INVALID_NAME);
-            }
-            
-            const admin = await Admin.findById(adminId);
-            if (!admin) {
-                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
-            }
-            
-            admin.name = name;
-            await admin.save();
-            
-            // Publish the name update event to admin-auth-service
-            await this._publishEvent('admin.admin.nameUpdate', {
-                adminId: admin._id.toString(),
-                value: { name },
+            // Test verisi oluştur
+            const requestData = {
+                message: "Bu bir test mesajıdır",
+                testData,
                 timestamp: new Date().toISOString()
+            };
+            
+            // Auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.testCommunication', requestData, {
+                timeout: 10000
             });
             
-            logger.info('Admin name updated successfully', { adminId });
-            
+            logger.info('Received response from auth service', { response });
             return {
-                message: successMessages.UPDATE.ADMIN_NAME_UPDATED,
-                admin: {
-                    id: admin._id,
-                    name: admin.name,
-                    surname: admin.surname,
-                    role: admin.role
-                }
+                success: true,
+                message: "Auth servisi ile iletişim testi",
+                sentData: requestData,
+                receivedResponse: response
             };
         } catch (error) {
-            logger.error('Error updating admin name', { 
+            logger.error('Communication test with auth service failed', { 
                 error: error.message, 
-                stack: error.stack,
-                adminId 
+                stack: error.stack 
+            });
+            return {
+                success: false,
+                message: "Auth servisi ile iletişim testi başarısız",
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Admin-auth servisinden admin bilgilerini al
+     * @param {Object} adminData - Admin bilgisi veya ID (controller tarafından sağlanır)
+     * @returns {Promise<Object>} - Admin bilgileri
+     */
+    async getAdmin(adminId) {
+        try {
+            // Admin ID'sini al
+            
+            if (!adminId) {
+                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
+            }
+            
+            logger.info('Getting admin details from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId.toString(),
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdmin', requestData, {
+                timeout: 10000
+            });
+            
+            if (!response.success) {
+                logger.error('Failed to get admin details from auth service', { 
+                    adminId,
+                    error: response.message 
+                });
+                throw new NotFoundError(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+            }
+
+            logger.info('Received admin details from admin-auth service', { 
+                adminId,
+                success: response.success
+            });
+            
+            return {
+                success: true,
+                message: successMessages.SEARCH.ADMIN_FOUND,
+                admin: response.admin
+            };
+        } catch (error) {
+            logger.error('Failed to get admin details', { 
+                error: error.message, 
+                stack: error.stack
             });
             throw error;
         }
     }
-    
-    /**
-     * Helper method to publish events through the event bus
-     * @param {string} topic - Event topic
-     * @param {Object} data - Event data
-     * @private
-     */
-    async _publishEvent(topic, data) {
+
+    async changeAdminDataMany(adminId, newData) {
         try {
-            logger.info('Publishing event', { topic, data: { ...data, adminId: data.adminId } });
-            await eventBus.publish(topic, data);
-            logger.info('Event published successfully', { topic });
-        } catch (error) {
-            logger.error('Failed to publish event', { 
-                error: error.message, 
-                stack: error.stack,
-                topic 
+            // Admin ID kontrolü
+            if (!adminId) {
+                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
+            }
+            
+            // newData kontrolü
+            if (!newData || typeof newData !== 'object') {
+                throw new ValidationError(errorMessages.INVALID.INVALID_DATA);
+            }
+            
+            // En az bir alan güncellenmelidir
+            const { name, surname, email, phone } = newData;
+            if (!name && !surname && !email && !phone) {
+                throw new ValidationError("En az bir bilgi alanı güncellenmelidir");
+            }
+            
+            logger.info('Updating admin data from admin-auth service', { 
+                adminId,
+                fields: Object.keys(newData)
             });
-            // We don't throw here to prevent the main operation from failing
-            // just because event publishing failed
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId.toString(),
+                newData: newData,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.changeAdminDataMany', requestData, {
+                timeout: 10000
+            });
+            
+            if (!response.success) {
+                logger.error('Failed to change admin data from auth service', { 
+                    adminId,
+                    error: response.message 
+                });
+                
+                // Hata mesajından uygun hata tipini belirle ve fırlat
+                if (response.error === 'ValidationError') {
+                    throw new ValidationError(response.message);
+                } else if (response.error === 'NotFoundError') {
+                    throw new NotFoundError(response.message);
+                } else if (response.error === 'ConflictError') {
+                    throw new ConflictError(response.message);
+                } else {
+                    throw new Error(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+                }
+            }
+
+            logger.info('Received admin data changed from admin-auth service', { 
+                adminId,
+                success: response.success
+            });
+            
+            return {
+                success: true,
+                message: successMessages.UPDATE.ADMIN_DATA_UPDATED,
+                admin: response.admin
+            };
+        } catch (error) {
+            logger.error('Failed to change admin data', { 
+                error: error.message, 
+                stack: error.stack
+            });
+            throw error;
         }
+    }
+
+
+    async changeAdminDataJustOne(adminId, newData, type) {
+        try {
+            // Admin ID'sini al
+            
+            if (!adminId) {
+                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
+            }
+
+            if (!type) {
+                throw new ValidationError(errorMessages.INVALID.INVALID_TYPE);
+            }
+            if (type !== 'name' && type !== 'surname' && type !== 'email' && type !== 'phone') {
+                throw new ValidationError(errorMessages.INVALID.INVALID_TYPE_VALUE);
+            }
+            
+            if (!newData) {
+                throw new ValidationError(errorMessages.INVALID.EMPTY_DATA);
+            }
+            
+            logger.info('Updating admin data from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId.toString(),
+                newData: newData,
+                type: type,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.changeAdminDataJustOne', requestData, {
+                timeout: 10000
+            });
+            
+            if (!response.success) {
+                logger.error('Failed to change admin data from auth service', { 
+                    adminId,
+                    error: response.message 
+                });
+                throw new NotFoundError(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+            }
+
+            logger.info('Received admin data changed from admin-auth service', { 
+                adminId,
+                success: response.success
+            });
+            
+            return {
+                success: true,
+                message: successMessages.UPDATE.ADMIN_DATA_UPDATED,
+                admin: response.admin
+            };
+        } catch (error) {
+            logger.error('Failed to change admin data', { 
+                error: error.message, 
+                stack: error.stack
+            });
+            throw error;
+        }
+    
+
     }
     
     /**
      * Initialize event bus listeners for the admin service
      */
     async initializeEventListeners() {
-        try {
-            // This service primarily publishes events rather than consuming them
-            // But can be expanded to listen to events from other services if needed
-            logger.info('Admin service event publishers initialized');
-        } catch (error) {
-            logger.error('Failed to initialize event listeners', { 
-                error: error.message, 
-                stack: error.stack 
-            });
-        }
+        
     }
 }
 
