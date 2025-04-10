@@ -6,6 +6,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const adminAuthRoutes = require('./routes/admin.auth.routes');
 const { requestContextMiddleware } = require('./middlewares/requestContext');
+const responseHandlerMiddleware = require('./middlewares/responseHandler');
 const errorHandler = require('../../../shared/middlewares/errorHandler/errorHandler');
 const keyRotationService = require('../../../shared/services/security/keyRotation.service');
 const { logger, httpLogger } = require('../../../shared/utils/logger');
@@ -36,6 +37,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestContextMiddleware);
+app.use(responseHandlerMiddleware);
 
 // Routes
 app.use('/api/admin-auth', adminAuthRoutes);

@@ -1,6 +1,8 @@
 // middleware/requestContext.js
 const { AsyncLocalStorage } = require('async_hooks');
 const asyncLocalStorage = new AsyncLocalStorage();
+const axios = require('axios');
+const { logger } = require('../../../../shared/utils/logger');
 
 class RequestContext {
     constructor(req) {
@@ -27,12 +29,92 @@ class RequestContext {
     }
 }
 
-const requestContextMiddleware = (req, res, next) => {
+const requestContextMiddleware = async (req, res, next) => {
     try {
         const context = new RequestContext(req);
         
         // Attach context to request for easy access
         req.context = context;
+        
+        logger.debug("illk", {
+            adminId: req.cookies.adminId,
+            path: req.path
+        });
+
+        // Otomatik token yenileme kontrolü
+        // Access token yoksa ve adminId cookie'si varsa token yenileme işlemi
+        if ((!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) && 
+            (!req.cookies || !req.cookies.accessToken) && 
+            req.cookies && req.cookies.adminId) {
+            logger.debug("burada", {
+                adminId: req.cookies.adminId,
+                path: req.path
+            });
+            try {
+                const adminId = req.cookies.adminId;
+                
+                logger.info('Attempting to refresh token in requestContext middleware', { 
+                    adminId, 
+                    path: req.path
+                });
+                
+                // Admin-auth-service'e istek at ve cookie refresh işlemini başlat
+                // Doğru endpoint: /api/admin-auth (!)
+                const authServiceUrl = process.env.ADMIN_AUTH_SERVICE_URL || 'http://localhost:3002';
+                
+                const response = await axios.get(`${authServiceUrl}/api/admin-auth/cookie-refresh`, { 
+                    params: { adminId },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Service-Call': 'admin-service',
+                        // Cookie'yi başlıkta da gönder
+                        'Cookie': `adminId=${adminId}`
+                    },
+                    // CORS sorunlarını gidermek için withCredentials ekliyoruz
+                    withCredentials: true
+                });
+                
+                if (response.data && response.status === 200) {
+                    // Response'dan accessToken'ı alıp manuel olarak cookie'ye ekleyelim
+                    // Çünkü service to service isteklerde cookie'ler otomatik olarak ayarlanmaz
+                    if (response.data.accessToken) {
+                        res.cookie('accessToken', response.data.accessToken, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production',
+                            sameSite: 'strict',
+                            maxAge: 900000 // 15 dakika
+                        });
+                        
+                        // Token başarıyla yenilendi
+                        logger.info('Token successfully refreshed in requestContext middleware', { 
+                            adminId, 
+                            path: req.path,
+                            expiresAt: response.data.expiresAt
+                        });
+                        
+                        // requestRefreshed bayrağını ekle
+                        req.tokenRefreshed = true;
+                    } else {
+                        logger.warn('No accessToken in refresh response', { 
+                            adminId, 
+                            responseData: JSON.stringify(response.data)
+                        });
+                    }
+                } else {
+                    logger.warn('Unexpected response from auth service', { 
+                        status: response.status,
+                        data: JSON.stringify(response.data) 
+                    });
+                }
+            } catch (error) {
+                logger.error('Error refreshing token in requestContext middleware', { 
+                    error: error?.message || 'Unknown error', 
+                    stack: error?.stack,
+                    path: req.path
+                });
+                // Hata durumunda devam et, middleware zincirini kesme
+            }
+        }
         
         // Run the middleware with context
         asyncLocalStorage.run(context, () => {

@@ -4,8 +4,8 @@ module.exports = {
         USER_LOGGED_IN: 'Kullanıcı başarıyla giriş yaptı',
         VERIFICATION_EMAIL_SENT: 'Doğrulama kodu gönderildi',
         EMAIL_VERIFIED: 'Email doğrulandı',
-        PHONE_CHECKED: 'Telefon numarası kontrol edildi',
-        EMAIL_CHECKED: 'Email kontrol edildi',
+        PHONE_CHECKED: 'Telefon numarası kullanılabilir',
+        EMAIL_CHECKED: 'Email kullanılabilir',
         LOGIN_CODE_SENT: 'Giriş kodu gönderildi',
         LOGOUT_SUCCESS: 'Çıkış yapıldı',
         LOGIN_SUCCESS: 'Giriş yapıldı',
@@ -27,6 +27,14 @@ module.exports = {
         STORE_CREATED: 'Mağaza başarıyla oluşturuldu',
         WORKER_ADDED: 'Çalışan başarıyla eklendi',
         WORKER_ROLE_CHANGED: 'Çalışan rolü başarıyla değiştirildi',
+      },
+      UPDATE: {
+        ADMIN_NAME_UPDATED: 'Admin ismi başarıyla güncellendi',
+        ADMIN_DATA_UPDATED: 'Admin bilgileri başarıyla güncellendi',
+        ADMIN_LOCATION_UPDATED: 'Admin konumu başarıyla güncellendi',
+      },
+      DELETE: {
+        ADMIN_DELETED: 'Admin başarıyla silindi',
       },
 };
 

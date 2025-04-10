@@ -1,6 +1,9 @@
 const winston = require('winston');
 const path = require('path');
 const fs = require('fs');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 // Log dizinini oluştur (yoksa)
 const logDir = path.join(process.cwd(), 'logs');
@@ -30,7 +33,7 @@ const colorizedFormat = winston.format.combine(
 // Logger oluştur
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  defaultMeta: { service: 'auth-service' },
+  defaultMeta: { service: process.env.SERVICE_NAME },
   format: logFormat,
   transports: [
     // Error seviyesindeki logları ayrı dosyaya yaz
