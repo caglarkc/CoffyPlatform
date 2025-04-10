@@ -8,10 +8,12 @@ const asyncHandler = require('../../../../shared/middlewares/errorHandler/asyncH
 router.post('/login', asyncHandler(AdminAuthController.loginAdmin));
 router.get('/check-phone', asyncHandler(AdminAuthController.checkPhone));
 router.get('/check-email', asyncHandler(AdminAuthController.checkEmail));
-router.post('/refresh-access-token', asyncHandler(AdminAuthController.refreshAccessToken));
-router.get('/check-cookie', asyncHandler(AdminAuthController.checkCookie));
+router.get('/cookie-refresh', asyncHandler(AdminAuthController.cookieRefreshToken));
+router.get('/check-cookies', asyncHandler(AdminAuthController.checkCookie));
 router.get('/me', authAdminMiddleware, asyncHandler(AdminAuthController.getAdmin));
 router.post('/create-creator', asyncHandler(AdminAuthController.createCreator));
+router.get('/clear-cookies', asyncHandler(AdminAuthController.clearAllCookies));
+router.get('/clear-access-token', asyncHandler(AdminAuthController.clearAccessToken));
 
 // Test endpoint - servisin çalışıp çalışmadığını kontrol etmek için
 router.get('/test-service', asyncHandler(AdminAuthController.testService));

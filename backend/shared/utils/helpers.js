@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 const dotenv = require('dotenv');
-const Buffer = require('buffer').Buffer;
 dotenv.config();
 
 // Hash'leme işlemi
@@ -77,7 +76,7 @@ const verifyCreaterData = (data, hashedData) => {
     return hashedInputData === hashedData;
 };
 
-const verifyCreatorEmail = (email) => {
+const verifyCreatorEmailWithHash = (email) => {
     const secret = process.env.CREATER_SECRET_KEY;
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(email);
@@ -86,7 +85,7 @@ const verifyCreatorEmail = (email) => {
     return hashedInputEmail === hashedCreatorEmail;
 };
 
-const verifyCreatorPassword = (password) => {
+const verifyCreatorPasswordWithHash = (password) => {
     const secret = process.env.CREATER_SECRET_KEY;
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(password);
@@ -95,7 +94,15 @@ const verifyCreatorPassword = (password) => {
     return hashedInputPassword === hashedCreatorPassword;
 };
 
+const verifyCreatorEmail = (email) => {
+    const creatorEmail = process.env.CREATER_EMAIL;
+    return email === creatorEmail;
+};
 
+const verifyCreatorPassword = (password) => {
+    const creatorPassword = process.env.CREATER_PASSWORD;
+    return password === creatorPassword;
+};
 
 module.exports = {
     generateCode,

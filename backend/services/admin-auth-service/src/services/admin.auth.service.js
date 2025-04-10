@@ -288,7 +288,8 @@ class AdminAuthService {
             return {
                 message: successMessages.AUTH.LOGIN_SUCCESS,
                 admin: _formatAdminResponse(admin),
-                tokenPair
+                tokenPair,
+                adminId: admin._id.toString()
             };
     
             
@@ -433,8 +434,80 @@ class AdminAuthService {
                 durable: true
             });
             
-            await eventSubscriber.respondTo('admin.auth.getAdmin', async (payload, metadata) => {
-                logger.info('Received getAdmin request from admin-service', { 
+            await eventSubscriber.respondTo('admin.auth.getMe', async (payload, metadata) => {
+                logger.info('Received getMe request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        error: "NotFoundError",
+                        code: 404,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                return {
+                    success: true,
+                    message: "Admin bulundu",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+            });
+
+            await eventSubscriber.respondTo('admin.auth.changeLocation', async (payload, metadata) => {
+                logger.info('Received changeLocation request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        error: "NotFoundError",
+                        code: 404,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const isNotChanged = false;
+                if (admin.location.city === payload.location.city && admin.location.region === payload.location.region 
+                    && admin.location.district === payload.location.district && admin.location.storeId === payload.location.storeId) {
+                    isNotChanged = true;
+                }
+
+                if (isNotChanged) {
+                    throw new ValidationError(errorMessages.INVALID.NO_PENDING_REQUEST);
+                }
+                admin.location.city = payload.location.city;
+                admin.location.region = payload.location.region;
+                admin.location.district = payload.location.district;
+                admin.location.storeId = payload.location.storeId;
+
+                await admin.save();
+
+                return {
+                    success: true,
+                    message: "Admin konumu başarıyla güncellendi",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+            });
+
+            await eventSubscriber.respondTo('admin.auth.deleteMe', async (payload, metadata) => {
+                logger.info('Received deleteMe request from admin-service', { 
                     payload,
                     metadata,
                     replyTo: payload.replyTo 
@@ -450,14 +523,25 @@ class AdminAuthService {
                     };
                 }
 
+                if (admin.status === "deleted") {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.ALREADY_DELETED);
+                }
+
+                admin.status = "deleted";
+                await admin.save();
+
+                this.logoutAdmin(admin._id);
+
                 return {
                     success: true,
-                    message: "Admin bulundu",
-                    admin: _formatAdminResponse(admin),
+                    message: "Admin başarıyla silindi",
                     receivedData: payload,
                     timestamp: new Date().toISOString()
                 };
+
             });
+
+            
 
             await eventSubscriber.respondTo('admin.auth.changeAdminDataMany',async(payload,metadata)=>{
                 logger.info('Received changeAdminDataMany request from admin-service', { 

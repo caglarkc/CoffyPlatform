@@ -54,6 +54,16 @@ class AdminAuthController {
                     maxAge: 900000 // 15 dakika (15 * 60 * 1000 ms)
                 });
                 
+                // Kullanıcı ID'sini de 7 saatlik bir cookie olarak ekle (refresh token süresi)
+                // Sadece ilk giriş sırasında eklenecek
+                // MongoDB ObjectId'yi string'e dönüştür
+                res.cookie('adminId', result.adminId, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict',
+                    maxAge: 25200000 // 7 saat (7 * 60 * 60 * 1000 ms)
+                });
+                
                 // Response'a token'ı eklemiyoruz, sadece cookie olarak gönderiyoruz
                 delete result.tokenPair.accessToken;
             }
@@ -65,6 +75,9 @@ class AdminAuthController {
                     sameSite: 'strict',
                     maxAge: 900000 // 15 dakika
                 });
+                
+                // AdminId cookie'sini yenilemiyoruz, sadece access token güncelleniyor
+                // Böylece refresh token süresi korunuyor
                 
                 // Response'a token'ı eklemiyoruz
                 delete result.accessToken;
@@ -81,8 +94,9 @@ class AdminAuthController {
             const adminId = req.admin._id;
             const result = await AdminAuthService.logoutAdmin(adminId);
             
-            // Cookie'yi temizle
+            // Cookie'leri temizle
             res.clearCookie('accessToken');
+            res.clearCookie('adminId');
             
             return res.status(200).json(result);
         } catch (error) {
@@ -149,7 +163,7 @@ class AdminAuthController {
 
     async cookieRefreshToken(req, res) {
         try {
-            const adminId = req.body.adminId;
+            const adminId = req.cookies.adminId;
             const existingRefreshToken = await AdminAuthService.getRefreshToken(adminId);
             
             if (!existingRefreshToken) {
@@ -167,8 +181,18 @@ class AdminAuthController {
                     maxAge: 900000 // 15 dakika
                 });
                 
-                // Response'a token'ı eklemiyoruz
-                delete result.accessToken;
+                // Response'a token'ı da ekleyelim - böylece diğer servisler bunu alabilir
+                // Service to service iletişimde cookie'ler otomatik aktarılmaz
+                const tokenToReturn = result.accessToken;
+                
+                // Orijinal nesneyi korumak için kopyasını oluştur
+                const responseData = { 
+                    ...result,
+                    accessToken: tokenToReturn, // Token'ı yanıta ekle
+                    refreshed: true
+                };
+                
+                return res.status(200).json(responseData);
             }
             
             return res.status(200).json(result);
@@ -201,6 +225,73 @@ class AdminAuthController {
         }
     }
 
+    /**
+     * Tüm cookie'leri temizleyen endpoint
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object
+     */
+    async clearAllCookies(req, res) {
+        try {
+            // Bilinen tüm cookie'leri temizle
+            res.clearCookie('accessToken');
+            res.clearCookie('adminId');
+            
+            // Cookie options'ları tutarlı olması için orijinal cookie ayarlarıyla aynı tutuyoruz
+            const cookieOptions = {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            };
+            
+            // Diğer olası cookie'leri boş değerle ve sıfır süreli olarak ayarlayıp temizle
+            // Bu, tarayıcıda kalabilecek diğer cookie'leri de temizler
+            res.cookie('accessToken', '', { ...cookieOptions, maxAge: 0 });
+            res.cookie('adminId', '', { ...cookieOptions, maxAge: 0 });
+            
+            return res.status(200).json({
+                success: true,
+                message: "Tüm cookie'ler başarıyla temizlendi",
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Cookie'ler temizlenirken bir hata oluştu",
+                error: error.message
+            });
+        }
+    }
+
+    async clearAccessToken(req, res) {
+        try {
+            // Bilinen tüm cookie'leri temizle
+            res.clearCookie('accessToken');
+            
+            // Cookie options'ları tutarlı olması için orijinal cookie ayarlarıyla aynı tutuyoruz
+            const cookieOptions = {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            };
+            
+            // Diğer olası cookie'leri boş değerle ve sıfır süreli olarak ayarlayıp temizle
+            // Bu, tarayıcıda kalabilecek diğer cookie'leri de temizler
+            res.cookie('accessToken', '', { ...cookieOptions, maxAge: 0 });
+            
+            return res.status(200).json({
+                success: true,
+                message: "Access token başarıyla temizlendi",
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Access token temizlenirken bir hata oluştu",
+                error: error.message
+            });
+        }
+
+    }
     
 }
 

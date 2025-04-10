@@ -32,6 +32,59 @@ const _formatAdminResponse = (admin) => {
 
 class AdminService {
 
+
+    /**
+     * Hata durumlarını yönetmek için yardımcı metod
+     * @param {Error} error - Yakalanan hata
+     * @param {Object} res - Express response object
+     * @param {String} errorMessage - Kullanıcıya gösterilecek hata mesajı
+     * @param {Number} defaultStatusCode - Varsayılan HTTP durum kodu (isteğe bağlı, varsayılan 500)
+     * @returns {Object} HTTP yanıtı
+     */
+    _handleError(error, errorMessage) {
+        
+        // Hatayı logla
+        logger.error(errorMessage, { 
+            error: error.message, 
+            stack: error.stack
+        });
+
+        throw error;
+    }
+
+    _handleErrorWithType(response, adminId, errorMessage) {
+
+        logger.error(errorMessage, { 
+            adminId,
+            error: response.message 
+        });
+
+        if (response.error === 'ValidationError') {
+            throw new ValidationError(errorMessage);
+        } else if (response.error === 'NotFoundError') {
+            throw new NotFoundError(errorMessage);
+        } else if (response.error === 'ConflictError') {
+            throw new ConflictError(errorMessage);
+        } else {
+            throw new Error(errorMessage);
+        }        
+        
+    }
+
+    _handleSuccess(logMessage,successMessage, data) {
+
+        logger.info(logMessage, { 
+            data,
+            success: true
+        });
+
+        return {
+            success: true,
+            message: successMessage,
+            data: data
+        };
+    }
+
     async testCommunication(testData) {
         try {
             logger.info('Testing communication with auth service', { testData });
@@ -56,31 +109,12 @@ class AdminService {
                 receivedResponse: response
             };
         } catch (error) {
-            logger.error('Communication test with auth service failed', { 
-                error: error.message, 
-                stack: error.stack 
-            });
-            return {
-                success: false,
-                message: "Auth servisi ile iletişim testi başarısız",
-                error: error.message
-            };
+            this._handleError(error, "Auth servisi ile iletişim testi başarısız");
         }
     }
 
-    /**
-     * Admin-auth servisinden admin bilgilerini al
-     * @param {Object} adminData - Admin bilgisi veya ID (controller tarafından sağlanır)
-     * @returns {Promise<Object>} - Admin bilgileri
-     */
-    async getAdmin(adminId) {
+    async getMe(adminId) {
         try {
-            // Admin ID'sini al
-            
-            if (!adminId) {
-                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
-            }
-            
             logger.info('Getting admin details from admin-auth service', { adminId });
 
             // Admin-auth servisine istek gönder
@@ -90,54 +124,22 @@ class AdminService {
             };
 
             // Admin-auth servisine istek gönder
-            const response = await eventPublisher.request('admin.auth.getAdmin', requestData, {
+            const response = await eventPublisher.request('admin.auth.getMe', requestData, {
                 timeout: 10000
             });
             
             if (!response.success) {
-                logger.error('Failed to get admin details from auth service', { 
-                    adminId,
-                    error: response.message 
-                });
-                throw new NotFoundError(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
-            }
+                this._handleErrorWithType(response, adminId, "Admin detayları alınamadı");
+            } 
 
-            logger.info('Received admin details from admin-auth service', { 
-                adminId,
-                success: response.success
-            });
-            
-            return {
-                success: true,
-                message: successMessages.SEARCH.ADMIN_FOUND,
-                admin: response.admin
-            };
+            return this._handleSuccess('Received admin details from admin-auth service',successMessages.SEARCH.ADMIN_FOUND, response.admin);
         } catch (error) {
-            logger.error('Failed to get admin details', { 
-                error: error.message, 
-                stack: error.stack
-            });
-            throw error;
+            this._handleError(error, "Admin detayları alınamadı");
         }
     }
 
     async changeAdminDataMany(adminId, newData) {
         try {
-            // Admin ID kontrolü
-            if (!adminId) {
-                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
-            }
-            
-            // newData kontrolü
-            if (!newData || typeof newData !== 'object') {
-                throw new ValidationError(errorMessages.INVALID.INVALID_DATA);
-            }
-            
-            // En az bir alan güncellenmelidir
-            const { name, surname, email, phone } = newData;
-            if (!name && !surname && !email && !phone) {
-                throw new ValidationError("En az bir bilgi alanı güncellenmelidir");
-            }
             
             logger.info('Updating admin data from admin-auth service', { 
                 adminId,
@@ -157,62 +159,18 @@ class AdminService {
             });
             
             if (!response.success) {
-                logger.error('Failed to change admin data from auth service', { 
-                    adminId,
-                    error: response.message 
-                });
-                
-                // Hata mesajından uygun hata tipini belirle ve fırlat
-                if (response.error === 'ValidationError') {
-                    throw new ValidationError(response.message);
-                } else if (response.error === 'NotFoundError') {
-                    throw new NotFoundError(response.message);
-                } else if (response.error === 'ConflictError') {
-                    throw new ConflictError(response.message);
-                } else {
-                    throw new Error(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
-                }
+                this._handleErrorWithType(response, adminId, "Admin bilgileri güncellenemedi");
             }
 
-            logger.info('Received admin data changed from admin-auth service', { 
-                adminId,
-                success: response.success
-            });
-            
-            return {
-                success: true,
-                message: successMessages.UPDATE.ADMIN_DATA_UPDATED,
-                admin: response.admin
-            };
+            return this._handleSuccess('Admin bilgileri admin-auth servisinde güncellendi',successMessages.UPDATE.ADMIN_DATA_UPDATED, response.admin);
         } catch (error) {
-            logger.error('Failed to change admin data', { 
-                error: error.message, 
-                stack: error.stack
-            });
-            throw error;
+            this._handleError(error, "Admin bilgileri güncellenemedi");
         }
     }
 
 
     async changeAdminDataJustOne(adminId, newData, type) {
         try {
-            // Admin ID'sini al
-            
-            if (!adminId) {
-                throw new ValidationError(errorMessages.INVALID.INVALID_ID);
-            }
-
-            if (!type) {
-                throw new ValidationError(errorMessages.INVALID.INVALID_TYPE);
-            }
-            if (type !== 'name' && type !== 'surname' && type !== 'email' && type !== 'phone') {
-                throw new ValidationError(errorMessages.INVALID.INVALID_TYPE_VALUE);
-            }
-            
-            if (!newData) {
-                throw new ValidationError(errorMessages.INVALID.EMPTY_DATA);
-            }
-            
             logger.info('Updating admin data from admin-auth service', { adminId });
 
             // Admin-auth servisine istek gönder
@@ -229,34 +187,78 @@ class AdminService {
             });
             
             if (!response.success) {
-                logger.error('Failed to change admin data from auth service', { 
-                    adminId,
-                    error: response.message 
-                });
-                throw new NotFoundError(response.message || errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+                this._handleErrorWithType(response, adminId, "Admin bilgileri güncellenemedi");
             }
 
-            logger.info('Received admin data changed from admin-auth service', { 
-                adminId,
-                success: response.success
-            });
-            
-            return {
-                success: true,
-                message: successMessages.UPDATE.ADMIN_DATA_UPDATED,
-                admin: response.admin
-            };
+            return this._handleSuccess('Admin bilgileri admin-auth servisinde güncellendi',successMessages.UPDATE.ADMIN_DATA_UPDATED, response.admin);
         } catch (error) {
-            logger.error('Failed to change admin data', { 
-                error: error.message, 
-                stack: error.stack
-            });
-            throw error;
+            this._handleError(error, "Admin bilgileri güncellenemedi");
         }
     
 
     }
     
+
+    async changeLocation(adminId, location) {
+        try {
+            logger.info('Updating admin location from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId.toString(),
+                location: location,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.changeLocation', requestData, {
+                timeout: 10000
+            });
+            
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Admin konumu güncellenemedi");
+            }
+
+            return this._handleSuccess('Admin konumu admin-auth servisinde güncellendi',successMessages.UPDATE.ADMIN_LOCATION_UPDATED, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin konumu güncellenemedi");
+        }
+    
+    }
+
+    async deleteMe(adminId) {
+        try {
+            logger.info('Deleting admin from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId.toString(),
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.deleteMe', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Admin silinemedi");
+            }
+
+            return this._handleSuccess('Admin silindi',successMessages.DELETE.ADMIN_DELETED, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin silinemedi");
+        }
+    }
+
+    
+
+
+
+
+
     /**
      * Initialize event bus listeners for the admin service
      */
