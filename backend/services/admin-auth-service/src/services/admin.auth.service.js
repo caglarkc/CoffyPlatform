@@ -11,7 +11,7 @@ const tokenService = require('../../../../shared/services/token.service');
 const { getRedisClient } = require('../utils/database');
 const { getRequestContext } = require('../middlewares/requestContext');
 const { logger } = require('../../../../shared/utils/logger');
-const {validatePhone , validateEmail, validateName, validateSurname} = require('../../../../shared/utils/textUtils');
+const {validatePhone , validateEmail, validateName, validateSurname, validatePassword} = require('../../../../shared/utils/textUtils');
 const {validateAdminRegister} = require('../../../../shared/utils/validationUtils');
 const eventPublisher = require('../../../../shared/services/event/eventPublisher');
 const eventSubscriber = require('../../../../shared/services/event/eventSubscriber');
@@ -302,8 +302,43 @@ class AdminAuthService {
             throw error;
         }
     }
+
+    async changePassword(newPassword, loggedAdmin) {
+        try {
+            if (!loggedAdmin) {
+                throw new ForbiddenError("burada bir hata var knk");
+            }
+
+            validatePassword(newPassword);
+
+            const admin = await Admin.findById(loggedAdmin._id);
+            if (!admin) {
+                throw new NotFoundError(errorMessages.NOT_FOUND.ADMIN_NOT_FOUND);
+            }
+
+            if (admin.email === helpers.hashCreaterData(process.env.CREATER_EMAIL)) {
+                if (admin.password === helpers.hashCreaterData(newPassword)) {
+                    throw new ValidationError(errorMessages.INVALID.PASSWORD_SAME);
+                }
+                admin.password = helpers.hashCreaterData(newPassword);
+            } else {
+                if (admin.password === helpers.hashAdminData(newPassword)) {
+                    throw new ValidationError(errorMessages.INVALID.PASSWORD_SAME);
+                }
+                admin.password = helpers.hashAdminData(newPassword);
+            }
+
+            await admin.save();
+
+            return {
+                message: successMessages.AUTH.PASSWORD_CHANGED,
+                admin: _formatAdminResponse(admin)
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
     
-    //en son burada kaldım kontrol kısmında, devam et buradan aşagıya dogru kontrol edi düzenlemeye
     async deleteAdmin(loggedAdmin, email) {
         try {
             if (!loggedAdmin) {
@@ -334,7 +369,6 @@ class AdminAuthService {
         }
     }
 
-    //çıkış yaomayı deneyen, zaten giriş ypamış admin ile çıkış yapmayı deneyen id aynı mı kontrol et!
     async logoutAdmin(adminId) {
         try {
             logger.info('Admin logout attempt', { adminId });
@@ -541,7 +575,423 @@ class AdminAuthService {
 
             });
 
+            await eventSubscriber.respondTo('admin.auth.blockAdmin', async (payload, metadata) => {
+                logger.info('Received blockAdmin request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= admin.role) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                if (admin.status === "blocked") {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.ALREADY_BLOCKED);
+                }
+
+                admin.status = "blocked";
+                await admin.save();
+
+                return {
+                    success: true,
+                    message: "Admin başarıyla bloklandı",
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.unblockAdmin', async (payload, metadata) => {
+                logger.info('Received unblockAdmin request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= admin.role) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                if (admin.status !== "blocked") {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.ALREADY_UNBLOCKED);
+                }
+
+                admin.status = "active";
+                await admin.save();
+
+
+                return {
+                    success: true,
+                    message: "Admin başarıyla bloklanmamış",
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
             
+            await eventSubscriber.respondTo('admin.auth.downgradeRole', async (payload, metadata) => {
+                logger.info('Received downgradeRole request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= admin.role) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+
+                admin.role = admin.role - 1;
+                await admin.save();
+
+
+                return {
+                    success: true,
+                    message: "Admin rolü başarıyla düşürüldü",
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.upgradeRole', async (payload, metadata) => {
+                logger.info('Received upgradeRole request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= admin.role + 1) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+
+                admin.role = admin.role + 1;
+                await admin.save();
+
+                return {
+                    success: true,
+                    message: "Admin rolü başarıyla yükseltildi",
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.getAdminWithId', async (payload, metadata) => {
+                logger.info('Received getAdminWithId request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findById(payload.adminId);
+                if (!admin) {
+                    console.log("Admin bulunamadıadslşdi");
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        error: "NotFoundError",
+                        id: payload.adminId,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        error: "NotFoundError",
+                        id: payload.creatorAdminId,
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= 2) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                return {
+                    success: true,
+                    message: "Admin bulundu",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.getAdminWithEmail', async (payload, metadata) => {
+                logger.info('Received getAdminWithEmail request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findOne({email: payload.email});
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= 2) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                return {
+                    success: true,
+                    message: "Admin bulundu",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.getAdminWithPhone', async (payload, metadata) => {
+                logger.info('Received getAdminWithPhone request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admin = await Admin.findOne({phone: payload.phone});
+                if (!admin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= 2) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                return {
+                    success: true,
+                    message: "Admin bulundu",
+                    admin: _formatAdminResponse(admin),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.getAdmins', async (payload, metadata) => {
+                logger.info('Received getAdmins request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const admins = await Admin.find({});
+                if (!admins) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= 2) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                return {
+                    success: true,
+                    message: "Adminler bulundu",
+                    admins: admins.map(admin => _formatAdminResponse(admin)),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+            await eventSubscriber.respondTo('admin.auth.getAdminsWithUniqueData', async (payload, metadata) => {
+                logger.info('Received getAdminsWithUniqueData request from admin-service', { 
+                    payload,
+                    metadata,
+                    replyTo: payload.replyTo 
+                });
+
+                const type = payload.data.type;
+                const value = payload.data.value;
+                let admins;
+
+                if (!type || !value) {
+                    throw new ValidationError(errorMessages.INVALID.NO_INFORMATION_PROVIDED);
+                }
+
+                if (type === "name") {
+                    admins = await Admin.find({name: value});
+                }
+
+                if (type === "surname") {
+                    admins = await Admin.find({surname: value});
+                }
+
+                if (type === "role") {
+                    admins = await Admin.find({role: value});
+                }
+
+                if (type === "status") {
+                    admins = await Admin.find({status: value});
+                }
+                if (!admins || admins.length === 0) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                const creatorAdmin = await Admin.findById(payload.creatorAdminId);
+                if (!creatorAdmin) {
+                    return {
+                        success: false,
+                        message: "Admin bulunamadı",
+                        receivedData: payload,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                if (creatorAdmin.role <= 2) {
+                    throw new ForbiddenError(errorMessages.FORBIDDEN.INSUFFICIENT_PERMISSIONS);
+                }
+
+                return {
+                    success: true,
+                    message: "Adminler bulundu",
+                    admins: admins.map(admin => _formatAdminResponse(admin)),
+                    receivedData: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+            });
+
+
 
             await eventSubscriber.respondTo('admin.auth.changeAdminDataMany',async(payload,metadata)=>{
                 logger.info('Received changeAdminDataMany request from admin-service', { 

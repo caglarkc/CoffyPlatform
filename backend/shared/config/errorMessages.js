@@ -41,6 +41,9 @@ module.exports = {
         EMPTY_DATA: 'Veri boş bırakılamaz',
         EMPTY_DATA_ONE: 'En az bir bilgi alanı güncellenmelidir',
         INVALID_LOCATION_FORMAT: 'Region, city and district must be filled',
+        ALREADY_BLOCKED: 'Admin zaten bloklanmış',
+        ALREADY_UNBLOCKED: 'Admin zaten bloklanmamış',
+        PASSWORD_SAME: 'Şifre aynı olamaz',
     },
     NOT_FOUND: {
         ADMIN_NOT_FOUND: 'Admin bulunamadı',
@@ -62,6 +65,10 @@ module.exports = {
         STOREID_ALREADY_EXISTS: 'Bu mağaza ID\'siyle bir mağaza zaten mevcut',
         DONT_ENTER_EMAIL_AND_PHONE: 'Email ve telefon numarasını aynı anda girmeyiniz',
         WORKER_ALREADY_EXISTS: 'Bu çalışan zaten mevcut',
+        ALREADY_ACTIVE: 'Admin zaten aktif',
+        ALREADY_BLOCKED: 'Admin zaten bloklanmış',
+        ALREADY_UNBLOCKED: 'Admin zaten bloklanmamış',
+        ALREADY_DELETED: 'Admin zaten silinmiş',
     },
     CONFLICT: {
         USER_ALREADY_EXISTS: 'Kullanıcı zaten mevcut',

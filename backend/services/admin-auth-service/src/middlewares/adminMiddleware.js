@@ -86,7 +86,7 @@ const authAdminMiddleware = async (req, res, next) => {
         
         // Token'ı doğrula
         try {
-            const decoded = jwt.verify(token, process.env.SECRET_KEY);
+            const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
             const adminId = decoded.userId;
             
             // Redis'ten token kontrolü
@@ -227,11 +227,18 @@ const authAdminMiddleware = async (req, res, next) => {
                     timestamp: new Date().toISOString()
                 });
             } else if (error.name === 'JsonWebTokenError') {
+                logger.warn('Invalid JWT token error', {
+                    error: error.message,
+                    path: req.path,
+                    ip: req.ip
+                });
+                
                 return res.status(401).json({
                     success: false,
                     status: 401,
                     message: "Geçersiz token formatı",
-                    details: "Sağlanan token geçersiz bir formatta. Lütfen tekrar giriş yapın.",
+                    details: `Token doğrulama hatası: ${error.message}. Lütfen tekrar giriş yapın.`,
+                    errorCode: error.message,
                     type: "INVALID_TOKEN_FORMAT",
                     timestamp: new Date().toISOString()
                 });
