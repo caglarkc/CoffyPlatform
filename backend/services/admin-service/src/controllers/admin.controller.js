@@ -1,5 +1,7 @@
 const AdminService = require('../services/admin.service');
 const ValidationError = require('../../../../shared/utils/errors/ValidationError');
+const NotFoundError = require('../../../../shared/utils/errors/NotFoundError');
+const ConflictError = require('../../../../shared/utils/errors/ConflictError');
 const errorMessages = require('../../../../shared/config/errorMessages');
 const { logger } = require('../../../../shared/utils/logger');
 
@@ -15,7 +17,7 @@ class AdminController {
      */
     _handleError(error, res, errorMessage, defaultStatusCode = 500) {
         // Hata tipine göre uygun HTTP durum kodunu belirle
-        const statusCode = error ? (error.statusCode || defaultStatusCode) : defaultStatusCode;
+        let statusCode = defaultStatusCode;
         
         // Hatayı logla
         if (error) {
@@ -24,15 +26,39 @@ class AdminController {
                 stack: error.stack
             });
 
-            return res.status(statusCode).json({ 
+            // Hata tipine göre status kodu belirle
+            if (error instanceof ValidationError) {
+                statusCode = 400; // Bad Request
+            } else if (error instanceof NotFoundError) {
+                statusCode = 404; // Not Found
+            } else if (error instanceof ConflictError) {
+                statusCode = 409; // Conflict
+            } else if (error.statusCode) {
+                statusCode = error.statusCode;
+            }
+
+            // Hata nesnesinden ek veri varsa include et
+            const response = { 
                 success: false,
+                status: statusCode,
                 message: errorMessage,
-                error: error.message 
-            });
+                error: error.message,
+                type: error.constructor.name,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Hata nesnesinden varsa ek veriyi response'a ekle
+            if (error.data) {
+                response.data = error.data;
+            }
+
+            return res.status(statusCode).json(response);
         } else {
             return res.status(statusCode).json({ 
                 success: false,
-                message: errorMessage
+                status: statusCode,
+                message: errorMessage,
+                timestamp: new Date().toISOString()
             });
         }
     }
@@ -221,7 +247,14 @@ class AdminController {
 
     downgradeRole = async (req, res) => {
         try {
-            const result = await AdminService.downgradeRole(req.body);
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.downgradeRole(req.body.adminId, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Rol düşürme işlemi başarısız oldu");
@@ -230,7 +263,14 @@ class AdminController {
 
     upgradeRole = async (req, res) => {
         try {
-            const result = await AdminService.upgradeRole(req.body);
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.upgradeRole(req.body.adminId, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Rol yükseltme işlemi başarısız oldu");
@@ -239,7 +279,14 @@ class AdminController {
 
     blockAdmin = async (req, res) => {
         try {
-            const result = await AdminService.blockAdmin(req.body);
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.blockAdmin(req.body.adminId, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Admin bloklama işlemi başarısız oldu");
@@ -248,16 +295,61 @@ class AdminController {
 
     unblockAdmin = async (req, res) => {
         try {
-            const result = await AdminService.unblockAdmin(req.body);
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.unblockAdmin(req.body.adminId, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
-            return this._handleError(error, res, "Admin bloklama işlemi başarısız oldu");
+            return this._handleError(error, res, "Admin bloğu kaldırma işlemi başarısız oldu");
         }
     }
 
-    getAdmin = async (req, res) => {
+    getAdminWithId = async (req, res) => {
         try {
-            const result = await AdminService.getAdmin(req.body);
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.getAdminWithId(req.body.adminId, creatorAdminId);
+            return res.status(200).json(result);
+        } catch (error) {
+            return this._handleError(error, res, "Admin getirme işlemi başarısız oldu");
+        }
+    }
+
+    getAdminWithEmail = async (req, res) => {
+        try {
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.getAdminWithEmail(req.body.email, creatorAdminId);
+            return res.status(200).json(result);
+        } catch (error) {
+            return this._handleError(error, res, "Admin getirme işlemi başarısız oldu");
+        }
+    }
+
+    getAdminWithPhone = async (req, res) => {
+        try {
+            const creatorAdminId = req.adminId;
+
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+            const result = await AdminService.getAdminWithPhone(req.body.phone, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Admin getirme işlemi başarısız oldu");
@@ -266,7 +358,14 @@ class AdminController {
 
     getAdmins = async (req, res) => {
         try {
-            const result = await AdminService.getAdmins(req.body);
+            const creatorAdminId = req.adminId;
+            
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+
+            const result = await AdminService.getAdmins(creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Adminleri getirme işlemi başarısız oldu");
@@ -275,7 +374,14 @@ class AdminController {
 
     getAdminsWithUniqueData = async (req, res) => {
         try {
-            const result = await AdminService.getAdminsWithUniqueData(req.body);
+            const creatorAdminId = req.adminId;
+            
+            if (!creatorAdminId) {
+                const errorMsg = req.customAuthErrorMessage || errorMessages.INVALID.INVALID_ID;
+                return this._handleError(null, res, errorMsg, 401);            
+            }
+        
+            const result = await AdminService.getAdminsWithUniqueData(req.body, creatorAdminId);
             return res.status(200).json(result);
         } catch (error) {
             return this._handleError(error, res, "Adminleri getirme işlemi başarısız oldu");

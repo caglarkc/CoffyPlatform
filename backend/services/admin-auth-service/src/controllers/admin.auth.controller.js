@@ -89,6 +89,16 @@ class AdminAuthController {
         }
     }
 
+    async changePassword(req, res) {
+        try {
+            const loggedAdmin = req.admin;
+            const result = await AdminAuthService.changePassword(req.body.newPassword, loggedAdmin);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+    
     async logoutAdmin(req, res) {
         try {
             const adminId = req.admin._id;

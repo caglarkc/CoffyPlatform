@@ -21,7 +21,7 @@ router.get('/test-service', asyncHandler(AdminAuthController.testService));
 // Korumalı rotalar - kimlik doğrulama gerektirir
 router.post('/create-admin', authAdminMiddleware,asyncHandler(AdminAuthController.createAdmin));
 router.get('/logout', authAdminMiddleware, asyncHandler(AdminAuthController.logoutAdmin));
-
+router.post('/change-password', authAdminMiddleware, asyncHandler(AdminAuthController.changePassword));
 
 
 module.exports = router;

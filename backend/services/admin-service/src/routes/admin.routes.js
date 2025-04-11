@@ -18,6 +18,28 @@ router.post('/change-location', extractAdminIdMiddleware, asyncHandler(AdminCont
 
 router.get('/delete-me', extractAdminIdMiddleware, asyncHandler(AdminController.deleteMe));
 
+router.post('/downgrade-role', extractAdminIdMiddleware, asyncHandler(AdminController.downgradeRole));
+
+router.post('/upgrade-role', extractAdminIdMiddleware, asyncHandler(AdminController.upgradeRole));
+
+router.post('/block-admin', extractAdminIdMiddleware, asyncHandler(AdminController.blockAdmin));
+
+router.post('/unblock-admin', extractAdminIdMiddleware, asyncHandler(AdminController.unblockAdmin));
+
+router.post('/get-admin-with-id', extractAdminIdMiddleware, asyncHandler(AdminController.getAdminWithId));
+
+router.post('/get-admin-with-email', extractAdminIdMiddleware, asyncHandler(AdminController.getAdminWithEmail));
+
+router.post('/get-admin-with-phone', extractAdminIdMiddleware, asyncHandler(AdminController.getAdminWithPhone));
+
+router.get('/get-admins', extractAdminIdMiddleware, asyncHandler(AdminController.getAdmins));
+
+router.post('/get-admins-with-unique-data', extractAdminIdMiddleware, asyncHandler(AdminController.getAdminsWithUniqueData));
+
+
+
+
+
 // POST /api/admin/clear-cookies - Tüm cookie'leri temizle
 router.post('/clear-cookies', asyncHandler(AdminController.clearAllCookies));
 

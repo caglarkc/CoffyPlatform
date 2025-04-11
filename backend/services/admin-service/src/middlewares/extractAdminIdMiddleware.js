@@ -119,7 +119,7 @@ const extractAdminIdMiddleware = async (req, res, next) => {
                 
                 if (token) {
                     try {
-                        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+                        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
                         adminId = decoded.userId;
                         logger.debug('Admin ID extracted from token', { adminId, authSource });
                     } catch (tokenError) {

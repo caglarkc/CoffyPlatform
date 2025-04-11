@@ -10,6 +10,7 @@ module.exports = {
         LOGOUT_SUCCESS: 'Çıkış yapıldı',
         LOGIN_SUCCESS: 'Giriş yapıldı',
         TOKEN_REFRESHED: 'Token yenilendi',
+        PASSWORD_CHANGED: 'Şifre güncellendi',
       },
       UPDATE: {
         USER_UPDATED: 'Kullanıcı bilgileri güncellendi',
@@ -22,6 +23,7 @@ module.exports = {
       },
       SEARCH: {
         USER_FOUND: 'Kullanıcı bulundu',
+        ADMIN_FOUND: 'Admin bulundu',
       },
       STORE: {
         STORE_CREATED: 'Mağaza başarıyla oluşturuldu',
@@ -32,6 +34,10 @@ module.exports = {
         ADMIN_NAME_UPDATED: 'Admin ismi başarıyla güncellendi',
         ADMIN_DATA_UPDATED: 'Admin bilgileri başarıyla güncellendi',
         ADMIN_LOCATION_UPDATED: 'Admin konumu başarıyla güncellendi',
+        ADMIN_ROLE_DOWNGRADED: 'Admin rolü başarıyla düşürüldü',
+        ADMIN_ROLE_UPGRADED: 'Admin rolü başarıyla yükseltildi',
+        ADMIN_BLOCKED: 'Admin başarıyla bloklandı',
+        ADMIN_UNBLOCKED: 'Admin başarıyla bloğu kaldırıldı',
       },
       DELETE: {
         ADMIN_DELETED: 'Admin başarıyla silindi',

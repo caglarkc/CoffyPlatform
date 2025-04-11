@@ -36,10 +36,7 @@ class AdminService {
     /**
      * Hata durumlarını yönetmek için yardımcı metod
      * @param {Error} error - Yakalanan hata
-     * @param {Object} res - Express response object
      * @param {String} errorMessage - Kullanıcıya gösterilecek hata mesajı
-     * @param {Number} defaultStatusCode - Varsayılan HTTP durum kodu (isteğe bağlı, varsayılan 500)
-     * @returns {Object} HTTP yanıtı
      */
     _handleError(error, errorMessage) {
         
@@ -49,7 +46,26 @@ class AdminService {
             stack: error.stack
         });
 
-        throw error;
+        // Hata mesajında anahtar kelimeler var mı diye kontrol et
+        const errorMsg = error.message && error.message.toLowerCase();
+        
+        if (errorMsg && errorMsg.includes('bulunamadı')) {
+            throw new NotFoundError(errorMessage);
+        } else if (errorMsg && (errorMsg.includes('zaten var') || errorMsg.includes('already exists'))) {
+            throw new ConflictError(errorMessage);
+        } else if (errorMsg && (errorMsg.includes('geçersiz') || errorMsg.includes('invalid'))) {
+            throw new ValidationError(errorMessage);
+        } else if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+            // Zaten tiplendirilmiş hata ise aynen fırlat
+            throw error;
+        } else {
+            // Tiplendirilmemiş hatalar için, mesaja göre hata tipi oluştur
+            if (errorMessage.toLowerCase().includes('bulunamadı')) {
+                throw new NotFoundError(errorMessage);
+            } else {
+                throw new Error(errorMessage);
+            }
+        }
     }
 
     _handleErrorWithType(response, adminId, errorMessage) {
@@ -59,14 +75,29 @@ class AdminService {
             error: response.message 
         });
 
+        // Hata nesnesine ek veri ekliyoruz
+        const errorData = {
+            id: response.id || adminId,
+            receivedData: response.receivedData,
+            timestamp: response.timestamp || new Date().toISOString()
+        };
+
         if (response.error === 'ValidationError') {
-            throw new ValidationError(errorMessage);
+            const error = new ValidationError(errorMessage);
+            error.data = errorData;
+            throw error;
         } else if (response.error === 'NotFoundError') {
-            throw new NotFoundError(errorMessage);
+            const error = new NotFoundError(errorMessage);
+            error.data = errorData;
+            throw error;
         } else if (response.error === 'ConflictError') {
-            throw new ConflictError(errorMessage);
+            const error = new ConflictError(errorMessage);
+            error.data = errorData;
+            throw error;
         } else {
-            throw new Error(errorMessage);
+            const error = new Error(errorMessage);
+            error.data = errorData;
+            throw error;
         }        
         
     }
@@ -254,7 +285,248 @@ class AdminService {
     }
 
     
+    async downgradeRole(adminId, creatorAdminId) {
+        try {
+            logger.info('Downgrading admin role from admin-auth service', { adminId });
 
+            logger.debug('Downgrading admin role from admin-auth service', { adminId, creatorAdminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.downgradeRole', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Rol düşürülemedi");
+            }
+            
+            return this._handleSuccess('Admin rolü düşürüldü',successMessages.UPDATE.ADMIN_ROLE_DOWNGRADED, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin rolü düşürülemedi");
+        }
+    }  
+
+    async upgradeRole(adminId, creatorAdminId) {
+        try {
+            logger.info('Upgrading admin role from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.upgradeRole', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Rol yükseltilemedi");
+            }
+            
+            return this._handleSuccess('Admin rolü yükseltildi',successMessages.UPDATE.ADMIN_ROLE_UPGRADED, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin rolü yükseltilemedi");
+        }
+    }
+    
+    async blockAdmin(adminId, creatorAdminId) {
+        try {
+            logger.info('Blocking admin from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.blockAdmin', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Admin bloklanamadı");
+            }
+
+            return this._handleSuccess('Admin bloklandı',successMessages.UPDATE.ADMIN_BLOCKED, response.admin);
+        } catch (error) {
+            this._handleError(error, "Admin bloklanamadı");
+        }
+    }
+
+    async unblockAdmin(adminId, creatorAdminId) {
+        try {
+            logger.info('Unblocking admin from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.unblockAdmin', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Admin bloğu kaldırılamadı");
+            }
+
+            return this._handleSuccess('Admin bloğu kaldırıldı',successMessages.UPDATE.ADMIN_UNBLOCKED, response.admin);
+        } catch (error) {
+            this._handleError(error, "Admin bloğu kaldırılamadı");
+        }
+    }
+
+
+    async getAdminWithId(adminId, creatorAdminId) {
+        try {
+            logger.info('Getting admin with id from admin-auth service', { adminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                adminId: adminId,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdminWithId', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, adminId, "Admin bulunamadı");
+            }
+
+            return this._handleSuccess('Admin bulundu',successMessages.SEARCH.ADMIN_FOUND, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin bulunamadı");
+        }
+    }
+
+    async getAdminWithEmail(email, creatorAdminId) {
+        try {
+            logger.info('Getting admin with email from admin-auth service', { email });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                email: email,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdminWithEmail', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, email, "Admin bulunamadı");
+            }
+
+            return this._handleSuccess('Admin bulundu',successMessages.SEARCH.ADMIN_FOUND, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin bulunamadı");
+        }
+    }
+
+    async getAdminWithPhone(phone, creatorAdminId) {
+        try {
+            logger.info('Getting admin with phone from admin-auth service', { phone });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                phone: phone,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdminWithPhone', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, phone, "Admin bulunamadı");
+            }
+
+            return this._handleSuccess('Admin bulundu',successMessages.SEARCH.ADMIN_FOUND, response.admin);
+
+        } catch (error) {
+            this._handleError(error, "Admin bulunamadı");
+        }
+    }
+
+    async getAdmins(creatorAdminId) {
+        try {
+            logger.info('Getting admins from admin-auth service', { creatorAdminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdmins', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, creatorAdminId, "Admin bulunamadı");
+            }
+
+            return this._handleSuccess('Admin bulundu',successMessages.SEARCH.ADMIN_FOUND, response.admins);
+
+        } catch (error) {
+            this._handleError(error, "Admin bulunamadı");
+        }
+    }
+
+    async getAdminsWithUniqueData(data, creatorAdminId) {
+        try {
+            logger.info('Getting admins from admin-auth service', { creatorAdminId });
+
+            // Admin-auth servisine istek gönder
+            const requestData = {
+                data: data,
+                creatorAdminId: creatorAdminId,
+                timestamp: new Date().toISOString()
+            };
+
+            // Admin-auth servisine istek gönder
+            const response = await eventPublisher.request('admin.auth.getAdminsWithUniqueData', requestData, {
+                timeout: 10000
+            });
+
+            if (!response.success) {
+                this._handleErrorWithType(response, creatorAdminId, "Admin bulunamadı");
+            }
+
+            return this._handleSuccess('Admin bulundu',successMessages.SEARCH.ADMIN_FOUND, response.admins);
+
+        } catch (error) {
+            this._handleError(error, "Admin bulunamadı");
+        }
+    }
 
 
 
